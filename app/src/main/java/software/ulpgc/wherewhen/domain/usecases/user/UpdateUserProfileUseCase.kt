@@ -11,8 +11,9 @@ data class UpdateUserProfileDTO(
     val email: Email? = null
 ) {}
 
-class UpdateUserProfileUseCase(private val repository: UserRepository) {
-
+class UpdateUserProfileUseCase(
+    private val repository: UserRepository
+) {
     suspend operator fun invoke(uuid: UUID, dto: UpdateUserProfileDTO): Result<User> {
         val user = repository.getWith(uuid).mapCatching { it ->
             it ?: throw UserNotFoundException(uuid)
