@@ -1,5 +1,33 @@
 package software.ulpgc.wherewhen.domain.usecases.user
 
-class AuthenticateUserUseCase {
-    // TODO: Implement use case
+import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
+import software.ulpgc.wherewhen.domain.model.User
+import software.ulpgc.wherewhen.domain.persistence.repositories.AuthenticationRepository
+import software.ulpgc.wherewhen.domain.persistence.repositories.UserRepository
+import software.ulpgc.wherewhen.domain.services.TokenService
+import software.ulpgc.wherewhen.domain.valueObjects.Email
+
+data class AuthenticationResult(
+    val user: User,
+    val accessToken: String
+)
+
+class AuthenticateUserUseCase(
+    private val authRepository: AuthenticationRepository,
+    private val userRepository: UserRepository,
+    private val tokenService: TokenService
+) {
+    suspend operator fun invoke(email: Email, password: String): Result<AuthenticationResult> {
+        val uuid = authRepository.login(email, password).getOrElse { error ->
+            return Result.failure(error)
+        }
+        val user = userRepository.getWith(uuid).mapCatching {
+            it ?: throw UserNotFoundException(uuid)
+        }.getOrElse { error ->
+            return Result.failure(error)
+        }
+        val token = tokenService.generateAccessToken(user)
+
+        return Result.success(AuthenticationResult(user, token))
+    }
 }
