@@ -8,7 +8,7 @@ import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.exceptions.user.InvalidCredentialsException
 import software.ulpgc.wherewhen.domain.exceptions.user.UserAlreadyExistsException
 import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
-import software.ulpgc.wherewhen.domain.persistence.repositories.AuthenticationRepository
+import software.ulpgc.wherewhen.domain.ports.repositories.AuthenticationRepository
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 

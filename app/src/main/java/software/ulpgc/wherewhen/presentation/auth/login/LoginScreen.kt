@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel,
+    viewModel: JetpackComposeLoginViewModel,
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit = {}
 ) {

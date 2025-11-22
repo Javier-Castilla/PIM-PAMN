@@ -10,8 +10,8 @@ class LoginViewModelFactory(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            return LoginViewModel(authenticateUserUseCase) as T
+        if (modelClass.isAssignableFrom(JetpackComposeLoginViewModel::class.java)) {
+            return JetpackComposeLoginViewModel(authenticateUserUseCase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
