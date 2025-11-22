@@ -1,11 +1,14 @@
-package software.ulpgc.wherewhen.presentation.auth
+package software.ulpgc.wherewhen.presentation.auth.register
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -21,27 +24,29 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun LoginScreen(
-    viewModel: LoginViewModel,
-    onLoginSuccess: () -> Unit
+fun RegisterScreen(
+    viewModel: RegisterViewModel,
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val uiState = viewModel.uiState
     val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            onLoginSuccess()
+            onRegisterSuccess()
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-
         if (uiState.isSuccess) {
             Card(
                 colors = CardDefaults.cardColors(
@@ -56,7 +61,7 @@ fun LoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "✓ Login Exitoso",
+                        text = "✓ Registration Successful",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -65,9 +70,32 @@ fun LoginScreen(
         }
 
         Text(
-            text = "Welcome to WhereWhen",
+            text = "Create Account",
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        OutlinedTextField(
+            value = uiState.name,
+            onValueChange = viewModel::onNameChange,
+            label = { Text("Name") },
+            leadingIcon = {
+                Icon(Icons.Default.Person, contentDescription = "Name")
+            },
+            isError = uiState.nameError != null,
+            supportingText = uiState.nameError?.let { { Text(it) } },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            enabled = !uiState.isLoading && !uiState.isSuccess
         )
 
         OutlinedTextField(
@@ -94,7 +122,6 @@ fun LoginScreen(
         )
 
         var passwordVisible by remember { mutableStateOf(false) }
-
         OutlinedTextField(
             value = uiState.password,
             onValueChange = viewModel::onPasswordChange,
@@ -118,12 +145,48 @@ fun LoginScreen(
             supportingText = uiState.passwordError?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            enabled = !uiState.isLoading && !uiState.isSuccess
+        )
+
+        var confirmPasswordVisible by remember { mutableStateOf(false) }
+        OutlinedTextField(
+            value = uiState.confirmPassword,
+            onValueChange = viewModel::onConfirmPasswordChange,
+            label = { Text("Confirm Password") },
+            leadingIcon = {
+                Icon(Icons.Default.Lock, contentDescription = "Confirm Password")
+            },
+            trailingIcon = {
+                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    Icon(
+                        if (confirmPasswordVisible) Icons.Default.Visibility
+                        else Icons.Default.VisibilityOff,
+                        contentDescription = if (confirmPasswordVisible) "Hide password"
+                        else "Show password"
+                    )
+                }
+            },
+            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
+            else PasswordVisualTransformation(),
+            isError = uiState.confirmPasswordError != null,
+            supportingText = uiState.confirmPasswordError?.let { { Text(it) } },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
                 onDone = {
                     focusManager.clearFocus()
-                    viewModel.onLoginClick()
+                    viewModel.onRegisterClick()
                 }
             ),
             singleLine = true,
@@ -151,7 +214,7 @@ fun LoginScreen(
         }
 
         Button(
-            onClick = { viewModel.onLoginClick() },
+            onClick = { viewModel.onRegisterClick() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -163,8 +226,16 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Log In", style = MaterialTheme.typography.titleMedium)
+                Text("Register", style = MaterialTheme.typography.titleMedium)
             }
+        }
+
+        TextButton(
+            onClick = onNavigateToLogin,
+            modifier = Modifier.padding(top = 16.dp),
+            enabled = !uiState.isLoading
+        ) {
+            Text("Already have an account? Log In")
         }
     }
 }

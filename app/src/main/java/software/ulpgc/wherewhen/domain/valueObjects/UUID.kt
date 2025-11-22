@@ -3,15 +3,22 @@ package software.ulpgc.wherewhen.domain.valueObjects
 @JvmInline
 value class UUID private constructor(val value: String) {
     companion object {
-        private val UUID_REGEX =
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-                .toRegex(RegexOption.IGNORE_CASE)
+        private val STANDARD_UUID_REGEX =
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                .toRegex()
+
+        private val FIREBASE_UID_REGEX = "^[a-zA-Z0-9]{28}$".toRegex()
 
         fun parse(id: String): Result<UUID> {
-            return if (UUID_REGEX.matches(id)) {
-                Result.success(UUID(id.lowercase()))
-            } else {
-                Result.failure(IllegalArgumentException("Invalid UUID: $id"))
+            return when {
+                id.isBlank() ->
+                    Result.failure(IllegalArgumentException("UUID cannot be blank"))
+                STANDARD_UUID_REGEX.matches(id) ->
+                    Result.success(UUID(id.lowercase()))
+                FIREBASE_UID_REGEX.matches(id) ->
+                    Result.success(UUID(id))
+                else ->
+                    Result.failure(IllegalArgumentException("Invalid UUID format: $id"))
             }
         }
 

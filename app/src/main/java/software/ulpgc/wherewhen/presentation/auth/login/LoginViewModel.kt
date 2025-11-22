@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.auth
+package software.ulpgc.wherewhen.presentation.auth.login
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,9 +22,12 @@ data class LoginUiState(
 class LoginViewModel(
     private val authenticateUserUseCase: AuthenticateUserUseCase
 ) : ViewModel() {
-
     var uiState by mutableStateOf(LoginUiState())
         private set
+
+    fun resetState() {
+        uiState = LoginUiState()
+    }
 
     fun onEmailChange(email: String) {
         uiState = uiState.copy(
@@ -43,7 +46,6 @@ class LoginViewModel(
     }
 
     fun onLoginClick() {
-        // Validar campos básicos
         if (uiState.email.isBlank()) {
             uiState = uiState.copy(emailError = "Email is required")
             return
@@ -54,13 +56,10 @@ class LoginViewModel(
             return
         }
 
-        // Iniciar login
         uiState = uiState.copy(isLoading = true, errorMessage = null)
 
         viewModelScope.launch {
-            // ✅ Validar y crear Email value object
             val emailResult = Email.create(uiState.email)
-
             if (emailResult.isFailure) {
                 uiState = uiState.copy(
                     isLoading = false,
@@ -71,20 +70,18 @@ class LoginViewModel(
 
             val email = emailResult.getOrThrow()
 
-            // Autenticar
             authenticateUserUseCase(email, uiState.password).fold(
-                onSuccess = { result ->
+                onSuccess = {
                     uiState = uiState.copy(
                         isLoading = false,
                         isSuccess = true,
                         errorMessage = null
                     )
-                    // Aquí guardarías el token: saveToken(result.accessToken)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Authentication failed"
+                        errorMessage = error.message ?: "Login failed"
                     )
                 }
             )

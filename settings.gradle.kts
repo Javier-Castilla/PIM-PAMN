@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AroundMe"
+rootProject.name = "WhereWhen"
 include(":app")
  
