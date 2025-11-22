@@ -6,6 +6,7 @@ import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.model.Friendship
 import software.ulpgc.wherewhen.domain.ports.repositories.FriendshipRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendshipNotFoundException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -37,7 +38,7 @@ class FirebaseFriendshipRepository(
             .await()
 
         document.takeIf { it.exists() }?.toFriendship()
-            ?: throw IllegalStateException("Friendship not found")
+            ?: throw FriendshipNotFoundException(id, id)
     }
 
     override suspend fun getFriendshipsForUser(userId: UUID): Result<List<Friendship>> = runCatching {

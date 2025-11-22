@@ -6,6 +6,7 @@ import software.ulpgc.wherewhen.domain.model.ChatWithUser
 import software.ulpgc.wherewhen.domain.ports.repositories.ChatRepository
 import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 
 class GetUserChatsUseCase(
     private val chatRepository: ChatRepository,

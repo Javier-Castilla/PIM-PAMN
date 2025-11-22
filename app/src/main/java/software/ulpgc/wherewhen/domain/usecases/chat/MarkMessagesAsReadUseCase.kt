@@ -9,8 +9,12 @@ class MarkMessagesAsReadUseCase(
     private val chatRepository: ChatRepository
 ) {
     suspend operator fun invoke(chatId: UUID, userId: UUID): Result<Unit> {
-        return messageRepository.markAllAsRead(chatId, userId).onSuccess {
-            chatRepository.resetUnreadCount(chatId, userId)
+        return try {
+            messageRepository.markAllAsRead(chatId, userId).onSuccess {
+                chatRepository.resetUnreadCount(chatId, userId)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

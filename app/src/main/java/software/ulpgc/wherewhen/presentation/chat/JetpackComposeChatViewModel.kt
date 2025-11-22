@@ -15,6 +15,7 @@ import software.ulpgc.wherewhen.domain.usecases.chat.MarkMessagesAsReadUseCase
 import software.ulpgc.wherewhen.domain.usecases.chat.SendMessageUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.viewModels.ChatViewModel
+import software.ulpgc.wherewhen.domain.exceptions.chat.*
 
 data class ChatUiState(
     val otherUser: User? = null,
@@ -30,6 +31,7 @@ class JetpackComposeChatViewModel(
     private val sendMessageUseCase: SendMessageUseCase,
     private val markMessagesAsReadUseCase: MarkMessagesAsReadUseCase
 ) : ViewModel(), ChatViewModel {
+
     var uiState by mutableStateOf(ChatUiState())
         private set
 
@@ -57,7 +59,6 @@ class JetpackComposeChatViewModel(
 
     fun initChat(otherUser: User) {
         val currentUserId = getCurrentUserId() ?: return
-
         setOtherUser(otherUser)
         showLoading()
 
@@ -68,7 +69,13 @@ class JetpackComposeChatViewModel(
                     markMessagesAsRead(chat.id, currentUserId)
                     observeMessages(chat.id, currentUserId)
                 }
-                .onFailure { showError(it.message ?: "Failed to load chat") }
+                .onFailure { error ->
+                    val message = when (error) {
+                        is ChatNotFoundException -> "Chat not found"
+                        else -> error.message ?: "Error loading chat"
+                    }
+                    showError(message)
+                }
         }
     }
 
@@ -76,9 +83,7 @@ class JetpackComposeChatViewModel(
         viewModelScope.launch {
             getChatMessagesUseCase(chatId).collect { messages ->
                 showMessages(messages)
-                println("DEBUG: Messages received: ${messages.size}")  // <-- QUITAR
                 if (messages.isNotEmpty()) {
-                    println("DEBUG: Marking messages as read for chatId: ${chatId.value}, userId: ${userId.value}")  // <-- QUITAR
                     markMessagesAsRead(chatId, userId)
                 }
             }
@@ -88,12 +93,6 @@ class JetpackComposeChatViewModel(
     private fun markMessagesAsRead(chatId: UUID, userId: UUID) {
         viewModelScope.launch {
             markMessagesAsReadUseCase(chatId, userId)
-                .onSuccess {
-                    println("DEBUG: Messages marked as read successfully")  // <-- QUITAR
-                }
-                .onFailure {
-                    println("DEBUG: Failed to mark as read: ${it.message}")  // <-- QUITAR
-                }
         }
     }
 
@@ -105,7 +104,6 @@ class JetpackComposeChatViewModel(
         val currentUserId = getCurrentUserId() ?: return
         val chatId = currentChatId ?: return
         val text = uiState.messageText.trim()
-
         if (text.isEmpty()) return
 
         viewModelScope.launch {
@@ -113,8 +111,14 @@ class JetpackComposeChatViewModel(
                 .onSuccess {
                     uiState = uiState.copy(messageText = "")
                 }
-                .onFailure {
-                    showError(it.message ?: "Failed to send message")
+                .onFailure { error ->
+                    val message = when (error) {
+                        is EmptyMessageException -> "Cannot send empty message"
+                        is UnauthorizedChatAccessException -> "Not authorized to access chat"
+                        is ChatNotFoundException -> "Chat not found"
+                        else -> error.message ?: "Error sending message"
+                    }
+                    showError(message)
                 }
         }
     }
