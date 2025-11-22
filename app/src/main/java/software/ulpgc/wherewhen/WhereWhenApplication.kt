@@ -108,7 +108,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val sendFriendRequestUseCase: SendFriendRequestUseCase by lazy {
-        SendFriendRequestUseCase(friendRequestRepository)
+        SendFriendRequestUseCase(friendRequestRepository, friendshipRepository, userRepository)
     }
 
     override val getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase by lazy {

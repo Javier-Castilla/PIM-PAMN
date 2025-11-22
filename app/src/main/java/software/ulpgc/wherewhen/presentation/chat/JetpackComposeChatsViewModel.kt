@@ -21,6 +21,7 @@ data class ChatsUiState(
 class JetpackComposeChatsViewModel(
     private val getUserChatsUseCase: GetUserChatsUseCase
 ) : ViewModel(), ChatsViewModel {
+
     var uiState by mutableStateOf(ChatsUiState())
         private set
 
@@ -44,13 +45,19 @@ class JetpackComposeChatsViewModel(
     }
 
     fun loadChats() {
-        val currentUserId = getCurrentUserId() ?: return
+        val currentUserId = getCurrentUserId() ?: run {
+            showError("User not authenticated")
+            return
+        }
 
         showLoading()
-
         viewModelScope.launch {
-            getUserChatsUseCase(currentUserId).collect { chats ->
-                showChats(chats)
+            try {
+                getUserChatsUseCase(currentUserId).collect { chats ->
+                    showChats(chats)
+                }
+            } catch (e: Exception) {
+                showError(e.message ?: "Error loading chats")
             }
         }
     }

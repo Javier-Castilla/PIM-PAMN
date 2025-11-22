@@ -12,6 +12,8 @@ import software.ulpgc.wherewhen.domain.usecases.user.SearchUsersUseCase
 import software.ulpgc.wherewhen.domain.usecases.friendship.*
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.viewModels.SocialViewModel
+import software.ulpgc.wherewhen.domain.exceptions.friendship.*
+import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 
 data class UserWithStatus(
     val user: User,
@@ -38,6 +40,7 @@ class JetpackComposeSocialViewModel(
     private val getUserFriendsUseCase: GetUserFriendsUseCase,
     private val removeFriendUseCase: RemoveFriendUseCase
 ) : ViewModel(), SocialViewModel {
+
     var uiState by mutableStateOf(SocialUiState())
         private set
 
@@ -51,10 +54,8 @@ class JetpackComposeSocialViewModel(
 
     override fun showUsers(users: List<User>) {
         val currentUserId = getCurrentUserId() ?: return
-
         viewModelScope.launch {
             val filteredUsers = users.filter { it.uuid != currentUserId }
-
             val usersWithStatus = filteredUsers.map { user ->
                 val status = checkFriendshipStatusUseCase(currentUserId, user.uuid)
                     .getOrDefault(FriendshipStatus.NOT_FRIENDS)
@@ -84,7 +85,6 @@ class JetpackComposeSocialViewModel(
         }
 
         showLoading()
-
         viewModelScope.launch {
             searchUsersUseCase(uiState.searchQuery)
                 .fold(
@@ -95,14 +95,13 @@ class JetpackComposeSocialViewModel(
                             showUsers(users)
                         }
                     },
-                    onFailure = { showError(it.message ?: "Search failed") }
+                    onFailure = { showError(it.message ?: "Error searching users") }
                 )
         }
     }
 
     fun sendFriendRequest(targetUserId: UUID) {
         val currentUserId = getCurrentUserId() ?: return
-
         viewModelScope.launch {
             sendFriendRequestUseCase(currentUserId, targetUserId)
                 .fold(
@@ -110,58 +109,81 @@ class JetpackComposeSocialViewModel(
                         searchUsers()
                         loadPendingRequests()
                     },
-                    onFailure = { showError(it.message ?: "Failed to send request") }
+                    onFailure = { error ->
+                        val message = when (error) {
+                            is SelfFriendRequestException -> "Cannot send request to yourself"
+                            is AlreadyFriendsException -> "Already friends"
+                            is FriendRequestAlreadyExistsException -> "Request already sent"
+                            is UserNotFoundException -> "User not found"
+                            else -> error.message ?: "Error sending request"
+                        }
+                        showError(message)
+                    }
                 )
         }
     }
 
     fun loadPendingRequests() {
         val currentUserId = getCurrentUserId() ?: return
-
         viewModelScope.launch {
             getPendingFriendRequestsUseCase(currentUserId)
                 .fold(
                     onSuccess = { requests ->
                         uiState = uiState.copy(pendingRequests = requests)
                     },
-                    onFailure = { showError(it.message ?: "Failed to load requests") }
+                    onFailure = { showError(it.message ?: "Error loading requests") }
                 )
         }
     }
 
     fun acceptFriendRequest(requestId: UUID) {
+        val currentUserId = getCurrentUserId() ?: return
         viewModelScope.launch {
-            acceptFriendRequestUseCase(requestId)
+            acceptFriendRequestUseCase(requestId, currentUserId)
                 .fold(
                     onSuccess = {
                         loadPendingRequests()
                         loadFriends()
                     },
-                    onFailure = { showError(it.message ?: "Failed to accept request") }
+                    onFailure = { error ->
+                        val message = when (error) {
+                            is FriendRequestNotFoundException -> "Request not found"
+                            is UnauthorizedFriendshipActionException -> "Not authorized to accept"
+                            else -> error.message ?: "Error accepting request"
+                        }
+                        showError(message)
+                    }
                 )
         }
     }
 
     fun rejectFriendRequest(requestId: UUID) {
+        val currentUserId = getCurrentUserId() ?: return
         viewModelScope.launch {
-            rejectFriendRequestUseCase(requestId)
+            rejectFriendRequestUseCase(requestId, currentUserId)
                 .fold(
                     onSuccess = { loadPendingRequests() },
-                    onFailure = { showError(it.message ?: "Failed to reject request") }
+                    onFailure = { error ->
+                        val message = when (error) {
+                            is FriendRequestNotFoundException -> "Request not found"
+                            is UnauthorizedFriendshipActionException -> "Not authorized to reject"
+                            else -> error.message ?: "Error rejecting request"
+                        }
+                        showError(message)
+                    }
                 )
         }
     }
 
     fun loadFriends() {
         val currentUserId = getCurrentUserId() ?: return
-
         viewModelScope.launch {
             getUserFriendsUseCase(currentUserId)
                 .fold(
                     onSuccess = { friends ->
                         uiState = uiState.copy(friends = friends)
                     },
-                    onFailure = { showError(it.message ?: "Failed to load friends") }
+                    onFailure = { showError(it.message ?: "Error loading friends") }
                 )
         }
     }
@@ -177,7 +199,6 @@ class JetpackComposeSocialViewModel(
     fun confirmRemoveFriend() {
         val currentUserId = getCurrentUserId() ?: return
         val friendToRemove = uiState.friendToRemove ?: return
-
         viewModelScope.launch {
             removeFriendUseCase(currentUserId, friendToRemove.uuid)
                 .fold(
@@ -185,9 +206,13 @@ class JetpackComposeSocialViewModel(
                         hideRemoveFriendDialog()
                         loadFriends()
                     },
-                    onFailure = {
+                    onFailure = { error ->
                         hideRemoveFriendDialog()
-                        showError(it.message ?: "Failed to remove friend")
+                        val message = when (error) {
+                            is FriendshipNotFoundException -> "Friendship not found"
+                            else -> error.message ?: "Error removing friend"
+                        }
+                        showError(message)
                     }
                 )
         }
@@ -200,7 +225,6 @@ class JetpackComposeSocialViewModel(
             errorMessage = null
         )
     }
-
 
     private fun getCurrentUserId(): UUID? {
         val firebaseUser = FirebaseAuth.getInstance().currentUser ?: return null

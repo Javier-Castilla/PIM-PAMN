@@ -19,13 +19,13 @@ class CheckFriendshipStatusUseCase(
         return runCatching {
             val areFriends = friendshipRepository.existsBetweenUsers(currentUserId, targetUserId).getOrThrow()
             if (areFriends) return@runCatching FriendshipStatus.FRIENDS
-            
+
             val sentRequest = friendRequestRepository.getPendingBetweenUsers(currentUserId, targetUserId).getOrNull()
             if (sentRequest != null) return@runCatching FriendshipStatus.REQUEST_SENT
-            
+
             val receivedRequest = friendRequestRepository.getPendingBetweenUsers(targetUserId, currentUserId).getOrNull()
             if (receivedRequest != null) return@runCatching FriendshipStatus.REQUEST_RECEIVED
-            
+
             FriendshipStatus.NOT_FRIENDS
         }
     }

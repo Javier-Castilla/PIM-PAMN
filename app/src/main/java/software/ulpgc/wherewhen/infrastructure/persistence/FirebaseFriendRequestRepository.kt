@@ -7,6 +7,7 @@ import software.ulpgc.wherewhen.domain.model.FriendRequest
 import software.ulpgc.wherewhen.domain.model.FriendRequestStatus
 import software.ulpgc.wherewhen.domain.ports.repositories.FriendRequestRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestNotFoundException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -40,7 +41,7 @@ class FirebaseFriendRequestRepository(
             .await()
 
         document.takeIf { it.exists() }?.toFriendRequest()
-            ?: throw IllegalStateException("Friend request not found")
+            ?: throw FriendRequestNotFoundException(id)
     }
 
     override suspend fun getPendingRequestsForUser(userId: UUID): Result<List<FriendRequest>> = runCatching {

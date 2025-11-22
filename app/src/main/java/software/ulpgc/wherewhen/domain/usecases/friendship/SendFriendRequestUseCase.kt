@@ -3,21 +3,51 @@ package software.ulpgc.wherewhen.domain.usecases.friendship
 import software.ulpgc.wherewhen.domain.model.FriendRequest
 import software.ulpgc.wherewhen.domain.model.FriendRequestStatus
 import software.ulpgc.wherewhen.domain.ports.repositories.FriendRequestRepository
+import software.ulpgc.wherewhen.domain.ports.repositories.FriendshipRepository
+import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.domain.exceptions.friendship.SelfFriendRequestException
+import software.ulpgc.wherewhen.domain.exceptions.friendship.AlreadyFriendsException
+import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestAlreadyExistsException
+import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 import java.time.LocalDateTime
 
 class SendFriendRequestUseCase(
-    private val repository: FriendRequestRepository
+    private val friendRequestRepository: FriendRequestRepository,
+    private val friendshipRepository: FriendshipRepository,
+    private val userRepository: UserRepository
 ) {
-    suspend operator fun invoke(senderId: UUID, receiverId: UUID): Result<FriendRequest> {
-        val requestId = UUID.random()
-        val request = FriendRequest(
-            id = requestId,
-            senderId = senderId,
-            receiverId = receiverId,
-            status = FriendRequestStatus.PENDING,
-            createdAt = LocalDateTime.now()
-        )
-        return repository.create(request)
+    suspend operator fun invoke(senderId: UUID, receiverId: UUID): Result<Unit> {
+        return try {
+            if (senderId == receiverId) {
+                throw SelfFriendRequestException()
+            }
+
+            userRepository.getPublicUser(receiverId).getOrElse {
+                throw UserNotFoundException(receiverId)
+            }
+
+            val areFriends = friendshipRepository.existsBetweenUsers(senderId, receiverId).getOrThrow()
+            if (areFriends) {
+                throw AlreadyFriendsException(senderId, receiverId)
+            }
+
+            val existingRequest = friendRequestRepository.getPendingBetweenUsers(senderId, receiverId).getOrNull()
+            if (existingRequest != null) {
+                throw FriendRequestAlreadyExistsException(senderId, receiverId)
+            }
+
+            val request = FriendRequest(
+                id = UUID.random(),
+                senderId = senderId,
+                receiverId = receiverId,
+                status = FriendRequestStatus.PENDING,
+                createdAt = LocalDateTime.now()
+            )
+
+            friendRequestRepository.create(request).map { }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.model.Message
 import software.ulpgc.wherewhen.domain.ports.repositories.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.domain.exceptions.chat.MessageNotFoundException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -49,9 +50,11 @@ class FirebaseMessageRepository(
                     close(error)
                     return@addSnapshotListener
                 }
-                val messages = snapshot?.documents?.mapNotNull { 
-                    runCatching { it.toMessage() }.getOrNull() 
+
+                val messages = snapshot?.documents?.mapNotNull {
+                    runCatching { it.toMessage() }.getOrNull()
                 } ?: emptyList()
+
                 trySend(messages)
             }
 
@@ -66,7 +69,7 @@ class FirebaseMessageRepository(
             .await()
             .documents
             .firstOrNull()
-            ?: throw IllegalStateException("Message not found")
+            ?: throw MessageNotFoundException(messageId)
 
         messageDoc.reference
             .update(FIELD_IS_READ, true)
