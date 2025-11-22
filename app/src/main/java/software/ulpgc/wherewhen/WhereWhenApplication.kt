@@ -2,6 +2,7 @@ package software.ulpgc.wherewhen
 
 import android.app.Application
 import android.content.Context
+import com.google.firebase.FirebaseApp
 import software.ulpgc.wherewhen.domain.model.User
 import software.ulpgc.wherewhen.domain.persistence.repositories.AuthenticationRepository
 import software.ulpgc.wherewhen.domain.persistence.repositories.UserRepository
@@ -10,6 +11,8 @@ import software.ulpgc.wherewhen.domain.services.TokenService
 import software.ulpgc.wherewhen.domain.usecases.user.*
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseAuthenticationRepository
+import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseUserRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.InMemoryAuthenticationRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.InMemoryUserRepository
 import software.ulpgc.wherewhen.infrastructure.services.MockPasswordService
@@ -23,6 +26,7 @@ class WhereWhenApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        FirebaseApp.initializeApp(this)
         container = DefaultAppContainer(applicationContext)
     }
 }
@@ -46,25 +50,11 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     private val authRepository: AuthenticationRepository by lazy {
-        InMemoryAuthenticationRepository(passwordService).apply {
-            val testEmail = Email.create("test@example.com").getOrThrow()
-            val testUuid = UUID.parse("123e4567-e89b-12d3-a456-426614174000").getOrThrow()
-            preRegisterUser(testEmail, "password123", testUuid)
-        }
+        FirebaseAuthenticationRepository()
     }
 
     private val userRepository: UserRepository by lazy {
-        InMemoryUserRepository().apply {
-            val testEmail = Email.create("test@example.com").getOrThrow()
-            val testUuid = UUID.parse("123e4567-e89b-12d3-a456-426614174000").getOrThrow()
-            val testUser = User(
-                uuid = testUuid,
-                email = testEmail,
-                name = "Test User",
-                createdAt = LocalDateTime.now()
-            )
-            preloadUser(testUser)
-        }
+        FirebaseUserRepository()
     }
 
     override val authenticateUserUseCase: AuthenticateUserUseCase by lazy {

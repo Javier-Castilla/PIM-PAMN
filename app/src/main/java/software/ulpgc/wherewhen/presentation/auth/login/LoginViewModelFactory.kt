@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.auth
+package software.ulpgc.wherewhen.presentation.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
