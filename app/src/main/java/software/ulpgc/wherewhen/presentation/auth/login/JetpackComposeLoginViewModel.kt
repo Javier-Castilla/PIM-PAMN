@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.usecases.user.AuthenticateUserUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.Email
+import software.ulpgc.wherewhen.domain.viewModels.LoginViewModel
+import software.ulpgc.wherewhen.domain.model.Profile
 
 data class LoginUiState(
     val email: String = "",
@@ -19,30 +21,46 @@ data class LoginUiState(
     val passwordError: String? = null
 )
 
-class LoginViewModel(
+class JetpackComposeLoginViewModel(
     private val authenticateUserUseCase: AuthenticateUserUseCase
-) : ViewModel() {
+) : ViewModel(), LoginViewModel {
     var uiState by mutableStateOf(LoginUiState())
         private set
+
+    override fun showLoading() {
+        uiState = uiState.copy(isLoading = true, errorMessage = null)
+    }
+
+    override fun hideLoading() {
+        uiState = uiState.copy(isLoading = false)
+    }
+
+    override fun showSuccess(profile: Profile) {
+        uiState = uiState.copy(isLoading = false, isSuccess = true, errorMessage = null)
+    }
+
+    override fun showError(message: String) {
+        uiState = uiState.copy(isLoading = false, errorMessage = message)
+    }
+
+    override fun showEmailError(message: String) {
+        uiState = uiState.copy(isLoading = false, emailError = message)
+    }
+
+    override fun showPasswordError(message: String) {
+        uiState = uiState.copy(isLoading = false, passwordError = message)
+    }
 
     fun resetState() {
         uiState = LoginUiState()
     }
 
     fun onEmailChange(email: String) {
-        uiState = uiState.copy(
-            email = email,
-            emailError = null,
-            errorMessage = null
-        )
+        uiState = uiState.copy(email = email, emailError = null, errorMessage = null)
     }
 
     fun onPasswordChange(password: String) {
-        uiState = uiState.copy(
-            password = password,
-            passwordError = null,
-            errorMessage = null
-        )
+        uiState = uiState.copy(password = password, passwordError = null, errorMessage = null)
     }
 
     fun onLoginClick() {
@@ -61,10 +79,7 @@ class LoginViewModel(
         viewModelScope.launch {
             val emailResult = Email.create(uiState.email)
             if (emailResult.isFailure) {
-                uiState = uiState.copy(
-                    isLoading = false,
-                    emailError = "Invalid email format"
-                )
+                uiState = uiState.copy(isLoading = false, emailError = "Invalid email format")
                 return@launch
             }
 
@@ -72,17 +87,10 @@ class LoginViewModel(
 
             authenticateUserUseCase(email, uiState.password).fold(
                 onSuccess = {
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        isSuccess = true,
-                        errorMessage = null
-                    )
+                    uiState = uiState.copy(isLoading = false, isSuccess = true, errorMessage = null)
                 },
                 onFailure = { error ->
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        errorMessage = error.message ?: "Login failed"
-                    )
+                    uiState = uiState.copy(isLoading = false, errorMessage = error.message ?: "Login failed")
                 }
             )
         }

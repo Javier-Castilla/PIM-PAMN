@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun RegisterScreen(
-    viewModel: RegisterViewModel,
+    viewModel: JetpackComposeRegisterViewModel,
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {

@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.domain.persistence.repositories
+package software.ulpgc.wherewhen.domain.ports.repositories
 
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
