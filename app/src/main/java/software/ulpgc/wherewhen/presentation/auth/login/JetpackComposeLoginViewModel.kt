@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.usecases.user.AuthenticateUserUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.viewModels.LoginViewModel
-import software.ulpgc.wherewhen.domain.model.Profile
+import software.ulpgc.wherewhen.domain.model.user.Profile
 
 data class LoginUiState(
     val email: String = "",
@@ -26,6 +26,10 @@ class JetpackComposeLoginViewModel(
 ) : ViewModel(), LoginViewModel {
     var uiState by mutableStateOf(LoginUiState())
         private set
+
+    init {
+        resetState()
+    }
 
     override fun showLoading() {
         uiState = uiState.copy(isLoading = true, errorMessage = null)
@@ -75,7 +79,6 @@ class JetpackComposeLoginViewModel(
         }
 
         uiState = uiState.copy(isLoading = true, errorMessage = null)
-
         viewModelScope.launch {
             val emailResult = Email.create(uiState.email)
             if (emailResult.isFailure) {
@@ -84,7 +87,6 @@ class JetpackComposeLoginViewModel(
             }
 
             val email = emailResult.getOrThrow()
-
             authenticateUserUseCase(email, uiState.password).fold(
                 onSuccess = {
                     uiState = uiState.copy(isLoading = false, isSuccess = true, errorMessage = null)

@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import software.ulpgc.wherewhen.domain.model.ChatWithUser
+import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
 import software.ulpgc.wherewhen.domain.usecases.chat.GetUserChatsUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.viewModels.ChatsViewModel
@@ -28,8 +28,12 @@ class JetpackComposeChatsViewModel(
     val totalUnreadCount: Int
         get() = uiState.chats.sumOf { it.unreadCount }
 
+    init {
+        loadChats()
+    }
+
     override fun showLoading() {
-        uiState = uiState.copy(isLoading = true, errorMessage = null)
+        uiState = uiState.copy(isLoading = true)
     }
 
     override fun hideLoading() {
@@ -50,7 +54,10 @@ class JetpackComposeChatsViewModel(
             return
         }
 
-        showLoading()
+        if (uiState.chats.isEmpty()) {
+            showLoading()
+        }
+
         viewModelScope.launch {
             try {
                 getUserChatsUseCase(currentUserId).collect { chats ->

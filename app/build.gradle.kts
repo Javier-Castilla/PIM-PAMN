@@ -17,6 +17,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val ticketmasterKey = project.findProperty("TICKETMASTER_API_KEY") as String? ?: ""
+        buildConfigField("String", "TICKETMASTER_API_KEY", "\"$ticketmasterKey\"")
     }
 
     buildTypes {
@@ -41,6 +44,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -54,18 +58,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
-    // Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
     implementation("com.google.firebase:firebase-analytics")
-
-    // Firebase Authentication (SIN -ktx)
     implementation("com.google.firebase:firebase-auth")
-
-    // Firebase Firestore (SIN -ktx)
     implementation("com.google.firebase:firebase-firestore")
-
-    // Coroutines para Firebase
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
@@ -73,6 +71,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import software.ulpgc.wherewhen.domain.model.User
+import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.usecases.user.SearchUsersUseCase
 import software.ulpgc.wherewhen.domain.usecases.friendship.*
 import software.ulpgc.wherewhen.domain.valueObjects.UUID

@@ -3,9 +3,9 @@ package software.ulpgc.wherewhen.infrastructure.persistence
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.tasks.await
-import software.ulpgc.wherewhen.domain.model.FriendRequest
-import software.ulpgc.wherewhen.domain.model.FriendRequestStatus
-import software.ulpgc.wherewhen.domain.ports.repositories.FriendRequestRepository
+import software.ulpgc.wherewhen.domain.model.friendship.FriendRequest
+import software.ulpgc.wherewhen.domain.model.friendship.FriendRequestStatus
+import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestNotFoundException
 import java.time.LocalDateTime

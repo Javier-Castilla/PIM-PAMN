@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.usecases.user.RegisterUserUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.viewModels.RegisterViewModel
-import software.ulpgc.wherewhen.domain.model.Profile
+import software.ulpgc.wherewhen.domain.model.user.Profile
 
 data class RegisterUiState(
     val name: String = "",

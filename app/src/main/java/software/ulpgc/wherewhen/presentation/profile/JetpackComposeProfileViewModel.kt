@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import software.ulpgc.wherewhen.domain.model.Profile
+import software.ulpgc.wherewhen.domain.model.user.Profile
 import software.ulpgc.wherewhen.domain.usecases.user.GetUserUseCase
 import software.ulpgc.wherewhen.domain.usecases.user.UpdateUserProfileUseCase
 import software.ulpgc.wherewhen.domain.usecases.user.UpdateUserProfileDTO
@@ -26,11 +26,16 @@ class JetpackComposeProfileViewModel(
     private val getUserUseCase: GetUserUseCase,
     private val updateUserProfileUseCase: UpdateUserProfileUseCase
 ) : ViewModel(), ProfileViewModel {
+
     var uiState by mutableStateOf(ProfileUiState())
         private set
 
+    init {
+        loadProfile()
+    }
+
     override fun showLoading() {
-        uiState = uiState.copy(isLoading = true, errorMessage = null)
+        uiState = uiState.copy(isLoading = true)
     }
 
     override fun hideLoading() {
@@ -63,7 +68,9 @@ class JetpackComposeProfileViewModel(
             return
         }
 
-        showLoading()
+        if (uiState.profile == null) {
+            showLoading()
+        }
 
         viewModelScope.launch {
             val uuidResult = UUID.parse(currentUser.uid)
@@ -115,7 +122,6 @@ class JetpackComposeProfileViewModel(
         }
 
         showLoading()
-
         viewModelScope.launch {
             val uuidResult = UUID.parse(currentUser.uid)
             if (uuidResult.isFailure) {
