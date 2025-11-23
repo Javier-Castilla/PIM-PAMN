@@ -1,7 +1,7 @@
-package software.ulpgc.wherewhen.domain.ports.repositories
+package software.ulpgc.wherewhen.domain.ports.persistence
 
-import software.ulpgc.wherewhen.domain.model.Profile
-import software.ulpgc.wherewhen.domain.model.User
+import software.ulpgc.wherewhen.domain.model.user.Profile
+import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 

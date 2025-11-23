@@ -1,9 +1,9 @@
 package software.ulpgc.wherewhen.domain.usecases.user
 
 import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
-import software.ulpgc.wherewhen.domain.model.Profile
-import software.ulpgc.wherewhen.domain.ports.repositories.AuthenticationRepository
-import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
+import software.ulpgc.wherewhen.domain.model.user.Profile
+import software.ulpgc.wherewhen.domain.ports.persistence.AuthenticationRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.services.TokenService
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 

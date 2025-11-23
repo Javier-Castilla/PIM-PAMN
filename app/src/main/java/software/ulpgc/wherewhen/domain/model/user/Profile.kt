@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.domain.model
+package software.ulpgc.wherewhen.domain.model.user
 
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID;

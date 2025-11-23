@@ -1,7 +1,7 @@
 package software.ulpgc.wherewhen.domain.usecases.chat
 
-import software.ulpgc.wherewhen.domain.ports.repositories.ChatRepository
-import software.ulpgc.wherewhen.domain.ports.repositories.MessageRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 
 class MarkMessagesAsReadUseCase(

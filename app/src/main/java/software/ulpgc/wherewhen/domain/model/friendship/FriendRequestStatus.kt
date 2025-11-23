@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.domain.model
+package software.ulpgc.wherewhen.domain.model.friendship
 
 enum class FriendRequestStatus {
     PENDING,

@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.domain.model
+package software.ulpgc.wherewhen.domain.model.friendship
 
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.LocalDateTime

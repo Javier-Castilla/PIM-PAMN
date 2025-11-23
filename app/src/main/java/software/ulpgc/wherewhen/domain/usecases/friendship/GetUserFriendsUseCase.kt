@@ -1,8 +1,8 @@
 package software.ulpgc.wherewhen.domain.usecases.friendship
 
-import software.ulpgc.wherewhen.domain.model.User
-import software.ulpgc.wherewhen.domain.ports.repositories.FriendshipRepository
-import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
+import software.ulpgc.wherewhen.domain.model.user.User
+import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 
 class GetUserFriendsUseCase(

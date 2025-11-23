@@ -1,5 +1,6 @@
-package software.ulpgc.wherewhen.domain.model
+package software.ulpgc.wherewhen.domain.model.chat
 
+import software.ulpgc.wherewhen.domain.model.user.User
 import java.time.LocalDateTime
 
 data class ChatWithUser(
