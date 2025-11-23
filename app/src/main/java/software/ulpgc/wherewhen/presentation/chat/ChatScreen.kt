@@ -1,6 +1,5 @@
 package software.ulpgc.wherewhen.presentation.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,8 +14,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import software.ulpgc.wherewhen.domain.model.Message
-import software.ulpgc.wherewhen.domain.model.User
+import com.google.firebase.auth.FirebaseAuth
+import software.ulpgc.wherewhen.domain.model.chat.Message
+import software.ulpgc.wherewhen.domain.model.user.User
+import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,6 +29,7 @@ fun ChatScreen(
 ) {
     val uiState = viewModel.uiState
     val listState = rememberLazyListState()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
     LaunchedEffect(otherUser) {
         viewModel.initChat(otherUser)
@@ -35,7 +37,20 @@ fun ChatScreen(
 
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+            listState.scrollToItem(uiState.messages.size - 1)
+
+            val chatId = viewModel.getChatId()
+            val userId = currentUserId?.let { UUID.parse(it).getOrNull() }
+
+            if (chatId != null && userId != null) {
+                val hasUnreadFromOther = uiState.messages.any {
+                    !it.isRead && it.senderId != userId
+                }
+
+                if (hasUnreadFromOther) {
+                    viewModel.markMessagesAsRead(chatId, userId)
+                }
+            }
         }
     }
 
@@ -135,7 +150,9 @@ fun MessageBubble(
             )
         ) {
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .padding(12.dp)
             ) {
                 Text(
                     text = message.content,

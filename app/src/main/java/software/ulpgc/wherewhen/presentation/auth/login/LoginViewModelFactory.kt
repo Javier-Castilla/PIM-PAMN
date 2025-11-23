@@ -7,7 +7,6 @@ import software.ulpgc.wherewhen.domain.usecases.user.AuthenticateUserUseCase
 class LoginViewModelFactory(
     private val authenticateUserUseCase: AuthenticateUserUseCase
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(JetpackComposeLoginViewModel::class.java)) {

@@ -7,8 +7,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import software.ulpgc.wherewhen.domain.model.Message
-import software.ulpgc.wherewhen.domain.ports.repositories.MessageRepository
+import software.ulpgc.wherewhen.domain.model.chat.Message
+import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.chat.MessageNotFoundException
 import java.time.LocalDateTime

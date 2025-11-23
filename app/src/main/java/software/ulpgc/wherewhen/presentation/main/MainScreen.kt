@@ -6,7 +6,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import software.ulpgc.wherewhen.domain.model.User
+import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.presentation.events.EventsScreen
 import software.ulpgc.wherewhen.presentation.social.SocialScreen
 import software.ulpgc.wherewhen.presentation.social.JetpackComposeSocialViewModel
@@ -30,6 +30,7 @@ fun MainScreen(
 
     LaunchedEffect(Unit) {
         chatsViewModel.loadChats()
+        socialViewModel.loadPendingRequests()  // AÑADE ESTO
     }
 
     if (selectedChatUser != null) {
@@ -49,7 +50,19 @@ fun MainScreen(
                         onClick = { selectedTab = 0 }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        icon = {
+                            BadgedBox(
+                                badge = {
+                                    if (socialViewModel.uiState.pendingRequests.isNotEmpty()) {
+                                        Badge {
+                                            Text("${socialViewModel.uiState.pendingRequests.size}")
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null)
+                            }
+                        },
                         label = { Text("Social") },
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 }

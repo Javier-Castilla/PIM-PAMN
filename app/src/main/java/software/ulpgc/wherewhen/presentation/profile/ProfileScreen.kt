@@ -24,10 +24,6 @@ fun ProfileScreen(
     val uiState = viewModel.uiState
     var isEditing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadProfile()
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,9 +94,7 @@ fun ProfileScreen(
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
-
                         Spacer(modifier = Modifier.height(24.dp))
-
                         if (isEditing) {
                             OutlinedTextField(
                                 value = uiState.editName,
@@ -110,9 +104,7 @@ fun ProfileScreen(
                                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                                 singleLine = true
                             )
-
                             Spacer(modifier = Modifier.height(16.dp))
-
                             OutlinedTextField(
                                 value = uiState.editDescription,
                                 onValueChange = { viewModel.onDescriptionChange(it) },
@@ -122,9 +114,7 @@ fun ProfileScreen(
                                 minLines = 3,
                                 maxLines = 5
                             )
-
                             Spacer(modifier = Modifier.height(24.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -154,18 +144,14 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
-
                             Spacer(modifier = Modifier.height(8.dp))
-
                             Text(
                                 text = uiState.profile.email.value,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
                             if (uiState.profile.description.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(16.dp))
-
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
@@ -179,9 +165,7 @@ fun ProfileScreen(
                                     )
                                 }
                             }
-
                             Spacer(modifier = Modifier.height(32.dp))
-
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
@@ -219,9 +203,7 @@ fun ProfileScreen(
                                     }
                                 }
                             }
-
                             Spacer(modifier = Modifier.height(24.dp))
-
                             Button(
                                 onClick = {
                                     isEditing = true

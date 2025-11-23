@@ -1,6 +1,6 @@
 package software.ulpgc.wherewhen.infrastructure.services
 
-import software.ulpgc.wherewhen.domain.model.Profile
+import software.ulpgc.wherewhen.domain.model.user.Profile
 import software.ulpgc.wherewhen.domain.services.TokenService
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID

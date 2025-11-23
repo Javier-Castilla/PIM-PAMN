@@ -4,9 +4,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
-import software.ulpgc.wherewhen.domain.model.Profile
-import software.ulpgc.wherewhen.domain.model.User
-import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
+import software.ulpgc.wherewhen.domain.model.user.Profile
+import software.ulpgc.wherewhen.domain.model.user.User
+import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.Email
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.LocalDateTime

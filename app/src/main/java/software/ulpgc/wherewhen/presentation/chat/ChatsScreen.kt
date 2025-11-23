@@ -8,13 +8,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import software.ulpgc.wherewhen.domain.model.ChatWithUser
+import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,10 +23,6 @@ fun ChatsScreen(
     onChatClick: (ChatWithUser) -> Unit
 ) {
     val uiState = viewModel.uiState
-
-    LaunchedEffect(Unit) {
-        viewModel.loadChats()
-    }
 
     Scaffold(
         topBar = {
@@ -101,6 +96,7 @@ fun ChatItem(
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
+
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -108,6 +104,7 @@ fun ChatItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+
                 if (chatWithUser.lastMessage != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

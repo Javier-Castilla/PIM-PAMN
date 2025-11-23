@@ -6,8 +6,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import software.ulpgc.wherewhen.domain.model.Chat
-import software.ulpgc.wherewhen.domain.ports.repositories.ChatRepository
+import software.ulpgc.wherewhen.domain.model.chat.Chat
+import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.chat.ChatNotFoundException
 import java.time.LocalDateTime

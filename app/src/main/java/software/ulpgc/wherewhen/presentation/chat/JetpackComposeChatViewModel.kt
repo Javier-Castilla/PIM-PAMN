@@ -7,8 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import software.ulpgc.wherewhen.domain.model.Message
-import software.ulpgc.wherewhen.domain.model.User
+import software.ulpgc.wherewhen.domain.model.chat.Message
+import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.usecases.chat.CreateOrGetChatUseCase
 import software.ulpgc.wherewhen.domain.usecases.chat.GetChatMessagesUseCase
 import software.ulpgc.wherewhen.domain.usecases.chat.MarkMessagesAsReadUseCase
@@ -37,36 +37,16 @@ class JetpackComposeChatViewModel(
 
     private var currentChatId: UUID? = null
 
-    override fun showLoading() {
-        uiState = uiState.copy(isLoading = true, errorMessage = null)
-    }
+    fun getChatId(): UUID? = currentChatId
 
-    override fun hideLoading() {
-        uiState = uiState.copy(isLoading = false)
-    }
-
-    override fun showMessages(messages: List<Message>) {
-        uiState = uiState.copy(messages = messages, isLoading = false, errorMessage = null)
-    }
-
-    override fun showError(message: String) {
-        uiState = uiState.copy(isLoading = false, errorMessage = message)
-    }
-
-    override fun setOtherUser(user: User) {
-        uiState = uiState.copy(otherUser = user)
-    }
-
-    fun initChat(otherUser: User) {
+    override fun initChat(otherUser: User) {
         val currentUserId = getCurrentUserId() ?: return
         setOtherUser(otherUser)
         showLoading()
-
         viewModelScope.launch {
             createOrGetChatUseCase(currentUserId, otherUser.uuid)
                 .onSuccess { chat ->
                     currentChatId = chat.id
-                    markMessagesAsRead(chat.id, currentUserId)
                     observeMessages(chat.id, currentUserId)
                 }
                 .onFailure { error ->
@@ -83,53 +63,75 @@ class JetpackComposeChatViewModel(
         viewModelScope.launch {
             getChatMessagesUseCase(chatId).collect { messages ->
                 showMessages(messages)
-                if (messages.isNotEmpty()) {
-                    markMessagesAsRead(chatId, userId)
-                }
             }
         }
     }
 
-    private fun markMessagesAsRead(chatId: UUID, userId: UUID) {
-        viewModelScope.launch {
-            markMessagesAsReadUseCase(chatId, userId)
-        }
-    }
-
-    fun onMessageTextChange(text: String) {
-        uiState = uiState.copy(messageText = text)
-    }
-
-    fun sendMessage() {
-        val currentUserId = getCurrentUserId() ?: return
+    override fun sendMessage() {
         val chatId = currentChatId ?: return
-        val text = uiState.messageText.trim()
-        if (text.isEmpty()) return
+        val currentUserId = getCurrentUserId() ?: return
+        val content = uiState.messageText.trim()
+
+        if (content.isBlank()) return
+
+        clearMessageText()
 
         viewModelScope.launch {
-            sendMessageUseCase(chatId, currentUserId, text)
-                .onSuccess {
-                    uiState = uiState.copy(messageText = "")
-                }
+            sendMessageUseCase(chatId, currentUserId, content)
                 .onFailure { error ->
                     val message = when (error) {
-                        is EmptyMessageException -> "Cannot send empty message"
-                        is UnauthorizedChatAccessException -> "Not authorized to access chat"
-                        is ChatNotFoundException -> "Chat not found"
-                        else -> error.message ?: "Error sending message"
+                        is MessageNotFoundException -> "Message not found"
+                        else -> error.message ?: "Failed to send message"
                     }
                     showError(message)
                 }
         }
     }
 
-    fun isOwnMessage(message: Message): Boolean {
+    fun markMessagesAsRead(chatId: UUID, userId: UUID) {
+        viewModelScope.launch {
+            markMessagesAsReadUseCase(chatId, userId)
+        }
+    }
+
+    override fun isOwnMessage(message: Message): Boolean {
         val currentUserId = getCurrentUserId() ?: return false
         return message.senderId == currentUserId
     }
 
     private fun getCurrentUserId(): UUID? {
-        val firebaseUser = FirebaseAuth.getInstance().currentUser ?: return null
-        return UUID.parse(firebaseUser.uid).getOrNull()
+        val firebaseUid = FirebaseAuth.getInstance().currentUser?.uid ?: return null
+        return UUID.parse(firebaseUid).getOrNull()
+    }
+
+    override fun onMessageTextChange(text: String) {
+        uiState = uiState.copy(messageText = text)
+    }
+
+    private fun setOtherUser(user: User) {
+        uiState = uiState.copy(otherUser = user)
+    }
+
+    private fun showMessages(messages: List<Message>) {
+        uiState = uiState.copy(
+            messages = messages,
+            isLoading = false,
+            errorMessage = null
+        )
+    }
+
+    private fun clearMessageText() {
+        uiState = uiState.copy(messageText = "")
+    }
+
+    private fun showLoading() {
+        uiState = uiState.copy(isLoading = true, errorMessage = null)
+    }
+
+    private fun showError(message: String) {
+        uiState = uiState.copy(
+            isLoading = false,
+            errorMessage = message
+        )
     }
 }
