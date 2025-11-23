@@ -1,8 +1,8 @@
 package software.ulpgc.wherewhen.domain.usecases.chat
 
-import software.ulpgc.wherewhen.domain.model.Message
-import software.ulpgc.wherewhen.domain.ports.repositories.ChatRepository
-import software.ulpgc.wherewhen.domain.ports.repositories.MessageRepository
+import software.ulpgc.wherewhen.domain.model.chat.Message
+import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.chat.EmptyMessageException
 import software.ulpgc.wherewhen.domain.exceptions.chat.ChatNotFoundException

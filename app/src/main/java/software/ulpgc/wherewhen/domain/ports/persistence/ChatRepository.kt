@@ -1,7 +1,7 @@
-package software.ulpgc.wherewhen.domain.ports.repositories
+package software.ulpgc.wherewhen.domain.ports.persistence
 
 import kotlinx.coroutines.flow.Flow
-import software.ulpgc.wherewhen.domain.model.Chat
+import software.ulpgc.wherewhen.domain.model.chat.Chat
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 
 interface ChatRepository {

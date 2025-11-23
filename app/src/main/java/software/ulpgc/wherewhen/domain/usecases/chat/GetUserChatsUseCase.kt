@@ -2,11 +2,10 @@ package software.ulpgc.wherewhen.domain.usecases.chat
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import software.ulpgc.wherewhen.domain.model.ChatWithUser
-import software.ulpgc.wherewhen.domain.ports.repositories.ChatRepository
-import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
+import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
+import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 
 class GetUserChatsUseCase(
     private val chatRepository: ChatRepository,

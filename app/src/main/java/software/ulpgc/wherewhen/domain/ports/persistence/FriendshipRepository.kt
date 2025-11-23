@@ -1,6 +1,6 @@
-package software.ulpgc.wherewhen.domain.ports.repositories
+package software.ulpgc.wherewhen.domain.ports.persistence
 
-import software.ulpgc.wherewhen.domain.model.Friendship
+import software.ulpgc.wherewhen.domain.model.friendship.Friendship
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 
 interface FriendshipRepository {

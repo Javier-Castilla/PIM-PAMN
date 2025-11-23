@@ -1,6 +1,6 @@
 package software.ulpgc.wherewhen.domain.viewModels
 
-import software.ulpgc.wherewhen.domain.model.User
+import software.ulpgc.wherewhen.domain.model.user.User
 
 interface SocialViewModel {
     fun showLoading()

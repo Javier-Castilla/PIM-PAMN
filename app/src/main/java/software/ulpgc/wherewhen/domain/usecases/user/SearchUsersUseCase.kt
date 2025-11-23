@@ -1,7 +1,7 @@
 package software.ulpgc.wherewhen.domain.usecases.user
 
-import software.ulpgc.wherewhen.domain.model.User
-import software.ulpgc.wherewhen.domain.ports.repositories.UserRepository
+import software.ulpgc.wherewhen.domain.model.user.User
+import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 
 class SearchUsersUseCase(
     private val repository: UserRepository

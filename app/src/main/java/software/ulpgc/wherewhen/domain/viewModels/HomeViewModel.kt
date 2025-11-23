@@ -1,6 +1,6 @@
 package software.ulpgc.wherewhen.domain.viewModels
 
-import software.ulpgc.wherewhen.domain.model.Profile
+import software.ulpgc.wherewhen.domain.model.user.Profile
 
 interface HomeViewModel {
     fun showLoading()

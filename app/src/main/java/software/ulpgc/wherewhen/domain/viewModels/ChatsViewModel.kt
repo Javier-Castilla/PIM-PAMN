@@ -1,6 +1,6 @@
 package software.ulpgc.wherewhen.domain.viewModels
 
-import software.ulpgc.wherewhen.domain.model.ChatWithUser
+import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
 
 interface ChatsViewModel {
     fun showLoading()

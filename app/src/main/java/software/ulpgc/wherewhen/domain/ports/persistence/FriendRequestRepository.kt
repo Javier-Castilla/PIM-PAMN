@@ -1,7 +1,7 @@
-package software.ulpgc.wherewhen.domain.ports.repositories
+package software.ulpgc.wherewhen.domain.ports.persistence
 
-import software.ulpgc.wherewhen.domain.model.FriendRequest
-import software.ulpgc.wherewhen.domain.model.FriendRequestStatus
+import software.ulpgc.wherewhen.domain.model.friendship.FriendRequest
+import software.ulpgc.wherewhen.domain.model.friendship.FriendRequestStatus
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.LocalDateTime
 

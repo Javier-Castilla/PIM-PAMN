@@ -1,9 +1,9 @@
 package software.ulpgc.wherewhen.domain.usecases.friendship
 
-import software.ulpgc.wherewhen.domain.model.Friendship
-import software.ulpgc.wherewhen.domain.model.FriendRequestStatus
-import software.ulpgc.wherewhen.domain.ports.repositories.FriendRequestRepository
-import software.ulpgc.wherewhen.domain.ports.repositories.FriendshipRepository
+import software.ulpgc.wherewhen.domain.model.friendship.Friendship
+import software.ulpgc.wherewhen.domain.model.friendship.FriendRequestStatus
+import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestNotFoundException
 import software.ulpgc.wherewhen.domain.exceptions.friendship.UnauthorizedFriendshipActionException
