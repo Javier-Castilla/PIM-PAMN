@@ -1,5 +1,6 @@
 package software.ulpgc.wherewhen.presentation.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -23,14 +24,23 @@ fun MainScreen(
     profileViewModel: JetpackComposeProfileViewModel,
     chatsViewModel: JetpackComposeChatsViewModel,
     chatViewModel: JetpackComposeChatViewModel,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onBackPressed: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var selectedChatUser by remember { mutableStateOf<User?>(null) }
 
+    BackHandler(enabled = true) {
+        if (selectedChatUser != null) {
+            selectedChatUser = null
+        } else {
+            onBackPressed()
+        }
+    }
+
     LaunchedEffect(Unit) {
         chatsViewModel.loadChats()
-        socialViewModel.loadPendingRequests()  // AÑADE ESTO
+        socialViewModel.loadPendingRequests()
     }
 
     if (selectedChatUser != null) {
