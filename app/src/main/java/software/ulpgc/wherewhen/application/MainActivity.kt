@@ -56,11 +56,13 @@ class MainActivity : ComponentActivity() {
         val appContainer = (application as WhereWhenApplication).container
         var authState by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
         var showRegister by remember { mutableStateOf(false) }
+        var loginKey by remember { mutableStateOf(0) }
         val userId = authState?.uid
 
         when {
             authState == null && !showRegister -> {
                 val loginViewModel: JetpackComposeLoginViewModel = viewModel(
+                    key = "login_$loginKey",
                     factory = LoginViewModelFactory(appContainer.authenticateUserUseCase)
                 )
 
@@ -137,7 +139,9 @@ class MainActivity : ComponentActivity() {
                     onLogout = {
                         FirebaseAuth.getInstance().signOut()
                         authState = null
-                    }
+                        loginKey++
+                    },
+                    onBackPressed = { finish() }
                 )
             }
         }
