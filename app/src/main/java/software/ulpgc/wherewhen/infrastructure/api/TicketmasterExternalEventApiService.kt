@@ -6,6 +6,7 @@ import software.ulpgc.wherewhen.BuildConfig
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventCategory
 import software.ulpgc.wherewhen.domain.ports.api.ExternalEventApiService
+import software.ulpgc.wherewhen.infrastructure.api.TicketmasterApiService
 import software.ulpgc.wherewhen.infrastructure.api.mappers.TicketmasterMapper
 
 class TicketmasterExternalEventApiService : ExternalEventApiService {
