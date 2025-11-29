@@ -24,11 +24,13 @@ interface EventRepository {
         radiusKm: Int = 25
     ): Result<List<Event>>
 
+    //TODO: borrar esto o que?
     suspend fun getAllNearbyEvents(
         location: Location,
         radiusKm: Int = 25
     ): Result<List<Event>>
 
+    //TODO: borrar esto o que?
     suspend fun getAllEventsByCategory(
         location: Location,
         category: EventCategory,
@@ -52,4 +54,6 @@ interface EventRepository {
     suspend fun getEventAttendees(eventId: UUID): Result<List<UUID>>
 
     suspend fun getUserJoinedEvents(userId: UUID): Result<List<Event>>
+
+    suspend fun getUserCreatedEvents(userId: UUID): Result<List<Event>>
 }

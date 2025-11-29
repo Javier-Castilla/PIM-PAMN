@@ -147,4 +147,8 @@ class CompositeEventRepository(
     override suspend fun getUserJoinedEvents(userId: UUID): Result<List<Event>> {
         return firebaseEventRepository.getUserJoinedEvents(userId)
     }
+
+    override suspend fun getUserCreatedEvents(userId: UUID): Result<List<Event>> {
+        TODO("Not yet implemented")
+    }
 }
