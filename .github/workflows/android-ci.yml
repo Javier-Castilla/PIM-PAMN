@@ -21,6 +21,13 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      - name: Create google-services.json from secret
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          mkdir -p app
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -33,5 +40,5 @@ jobs:
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wherewhen-debug-apk
+          name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
