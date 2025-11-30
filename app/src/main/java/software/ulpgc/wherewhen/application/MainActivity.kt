@@ -1,9 +1,12 @@
 package software.ulpgc.wherewhen.application
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -12,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import software.ulpgc.wherewhen.WhereWhenApplication
@@ -31,10 +35,34 @@ import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatViewModel
 import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatsViewModel
 import software.ulpgc.wherewhen.presentation.chat.ChatViewModelFactory
 import software.ulpgc.wherewhen.presentation.chat.ChatsViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
 
 class MainActivity : ComponentActivity() {
+
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true -> {
+                println("Permiso de ubicación concedido")
+            }
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true -> {
+                println("Permiso de ubicación aproximada concedido")
+            }
+            else -> {
+                println("Permisos de ubicación denegados")
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        requestLocationPermissions()
+
         enableEdgeToEdge()
         setContent {
             WindowInsets.safeDrawing
@@ -47,6 +75,25 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppNavigation()
                 }
+            }
+        }
+    }
+
+    private fun requestLocationPermissions() {
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                println("Ya tiene permisos de ubicación")
+            }
+            else -> {
+                locationPermissionRequest.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
             }
         }
     }
@@ -76,7 +123,6 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-
             authState == null && showRegister -> {
                 val registerViewModel: JetpackComposeRegisterViewModel = viewModel(
                     factory = RegisterViewModelFactory(appContainer.registerUserUseCase)
@@ -92,7 +138,6 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-
             else -> {
                 val socialViewModel: JetpackComposeSocialViewModel = viewModel(
                     key = "social_$userId",
@@ -131,11 +176,35 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
+                val eventsViewModel: JetpackComposeEventsViewModel = viewModel(
+                    key = "events_$userId",
+                    factory = EventsViewModelFactory(
+                        appContainer.searchNearbyEventsUseCase,
+                        appContainer.searchEventsByNameUseCase,
+                        appContainer.searchEventsByCategoryUseCase,
+                        appContainer.getUserJoinedEventsUseCase,
+                        appContainer.getUserCreatedEventsUseCase,
+                        appContainer.locationService
+                    )
+                )
+
+                val eventDetailViewModel: JetpackComposeEventDetailViewModel = viewModel(
+                    key = "event_detail_$userId",
+                    factory = EventDetailViewModelFactory(
+                        appContainer.getEventByIdUseCase,
+                        appContainer.joinEventUseCase,
+                        appContainer.leaveEventUseCase,
+                        appContainer.getEventAttendeesUseCase
+                    )
+                )
+
                 MainScreen(
                     socialViewModel = socialViewModel,
                     profileViewModel = profileViewModel,
                     chatsViewModel = chatsViewModel,
                     chatViewModel = chatViewModel,
+                    eventsViewModel = eventsViewModel,
+                    eventDetailViewModel = eventDetailViewModel,
                     onLogout = {
                         FirebaseAuth.getInstance().signOut()
                         authState = null
