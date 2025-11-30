@@ -47,6 +47,9 @@ class JetpackComposeEventsViewModel(
     var currentLocation by mutableStateOf<Location?>(null)
         private set
 
+    var radiusKm by mutableStateOf(25)
+        private set
+
     init {
         loadLocation()
         loadNearbyEvents()
@@ -82,6 +85,15 @@ class JetpackComposeEventsViewModel(
         }
     }
 
+    fun onRadiusChange(newRadius: Int) {
+        radiusKm = newRadius
+        when {
+            searchQuery.isNotBlank() -> searchByName(searchQuery)
+            selectedCategory != null -> searchByCategory(selectedCategory!!)
+            else -> loadNearbyEvents()
+        }
+    }
+
     override fun onRefresh() {
         loadLocation()
         when (selectedTab) {
@@ -92,22 +104,18 @@ class JetpackComposeEventsViewModel(
 
     override fun loadNearbyEvents() {
         val location = currentLocation
-        println("DEBUG: Current location: $location")
+        println("UBICACIÓN ACTUAL: ${location?.latitude}, ${location?.longitude} - ${location?.address}")
         if (location == null) {
             uiState = UiState.Error("No se pudo obtener la ubicación")
             return
         }
         viewModelScope.launch {
             uiState = UiState.Loading
-            println("DEBUG: Buscando eventos en: lat=${location.latitude}, lon=${location.longitude}")
-            searchNearbyEventsUseCase(location, 25).fold(
+            searchNearbyEventsUseCase(location, radiusKm).fold(
                 onSuccess = { events ->
-                    println("DEBUG: Eventos encontrados: ${events.size}")
                     uiState = UiState.Success(events)
                 },
                 onFailure = { exception ->
-                    println("DEBUG: Error: ${exception.message}")
-                    exception.printStackTrace()
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -142,7 +150,7 @@ class JetpackComposeEventsViewModel(
         val location = currentLocation ?: return
         viewModelScope.launch {
             uiState = UiState.Loading
-            searchEventsByNameUseCase(location, query, 25).fold(
+            searchEventsByNameUseCase(location, query, radiusKm).fold(
                 onSuccess = { events ->
                     uiState = UiState.Success(events)
                 },
@@ -157,7 +165,7 @@ class JetpackComposeEventsViewModel(
         val location = currentLocation ?: return
         viewModelScope.launch {
             uiState = UiState.Loading
-            searchEventsByCategoryUseCase(location, category, 25).fold(
+            searchEventsByCategoryUseCase(location, category, radiusKm).fold(
                 onSuccess = { events ->
                     uiState = UiState.Success(events)
                 },

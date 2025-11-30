@@ -65,6 +65,11 @@ fun EventsScreen(
                     onClearSearch = { viewModel.clearSearch() }
                 )
 
+                RadiusControl(
+                    radiusKm = viewModel.radiusKm,
+                    onRadiusChange = { viewModel.onRadiusChange(it) }
+                )
+
                 CategoryFilter(
                     selectedCategory = viewModel.selectedCategory,
                     onCategorySelected = { viewModel.onCategorySelected(it) }
@@ -153,6 +158,41 @@ private fun SearchBar(
         },
         singleLine = true
     )
+}
+
+@Composable
+private fun RadiusControl(
+    radiusKm: Int,
+    onRadiusChange: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Radio de búsqueda",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "$radiusKm km",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Slider(
+            value = radiusKm.toFloat(),
+            onValueChange = { onRadiusChange(it.toInt()) },
+            valueRange = 5f..100f,
+            steps = 18,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable
