@@ -1,5 +1,6 @@
 package software.ulpgc.wherewhen.presentation.events
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -33,16 +34,21 @@ class JetpackComposeEventDetailViewModel(
         private set
 
     private var currentEventId: UUID? = null
+    private var currentEvent: Event? = null
 
     override fun loadEvent(eventId: UUID) {
         currentEventId = eventId
         viewModelScope.launch {
             uiState = UiState.Loading
+            Log.d("EventDetailViewModel", "Cargando evento: $eventId")
             getEventByIdUseCase(eventId).fold(
                 onSuccess = { event ->
+                    Log.d("EventDetailViewModel", "Evento cargado: ${event.title}")
+                    currentEvent = event
                     loadAttendees()
                 },
                 onFailure = { exception ->
+                    Log.e("EventDetailViewModel", "Error cargando evento", exception)
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -54,11 +60,14 @@ class JetpackComposeEventDetailViewModel(
         val userId = getCurrentUserId() ?: return
         viewModelScope.launch {
             isJoining = true
+            Log.d("EventDetailViewModel", "Uniéndose al evento: $eventId")
             joinEventUseCase(eventId, userId).fold(
                 onSuccess = {
+                    Log.d("EventDetailViewModel", "Unido correctamente")
                     loadEvent(eventId)
                 },
                 onFailure = { exception ->
+                    Log.e("EventDetailViewModel", "Error al unirse", exception)
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -71,11 +80,14 @@ class JetpackComposeEventDetailViewModel(
         val userId = getCurrentUserId() ?: return
         viewModelScope.launch {
             isJoining = true
+            Log.d("EventDetailViewModel", "Abandonando evento: $eventId")
             leaveEventUseCase(eventId, userId).fold(
                 onSuccess = {
+                    Log.d("EventDetailViewModel", "Abandonado correctamente")
                     loadEvent(eventId)
                 },
                 onFailure = { exception ->
+                    Log.e("EventDetailViewModel", "Error al abandonar", exception)
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -85,18 +97,20 @@ class JetpackComposeEventDetailViewModel(
 
     override fun loadAttendees() {
         val eventId = currentEventId ?: return
+        val event = currentEvent ?: return
         val userId = getCurrentUserId() ?: return
         viewModelScope.launch {
-            val eventResult = getEventByIdUseCase(eventId)
+            Log.d("EventDetailViewModel", "Cargando asistentes para: $eventId")
             val attendeesResult = getEventAttendeesUseCase(eventId)
-            
-            if (eventResult.isSuccess && attendeesResult.isSuccess) {
-                val event = eventResult.getOrNull()!!
+
+            if (attendeesResult.isSuccess) {
                 val attendees = attendeesResult.getOrNull()!!
                 val isAttending = attendees.contains(userId)
+                Log.d("EventDetailViewModel", "Asistentes: ${attendees.size}, isAttending: $isAttending")
                 uiState = UiState.Success(event, isAttending, attendees.size)
             } else {
-                uiState = UiState.Error("Error al cargar el evento")
+                Log.e("EventDetailViewModel", "Error cargando asistentes", attendeesResult.exceptionOrNull())
+                uiState = UiState.Success(event, false, 0)
             }
         }
     }
@@ -113,7 +127,7 @@ class JetpackComposeEventDetailViewModel(
             is AlreadyAttendingEventException -> "Ya estás asistiendo a este evento"
             is NotAttendingEventException -> "No estás asistiendo a este evento"
             is UnauthorizedEventAccessException -> "No tienes permiso para acceder"
-            else -> "Error al procesar la solicitud"
+            else -> "Error al procesar la solicitud: ${exception.message}"
         }
     }
 }

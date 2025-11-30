@@ -17,11 +17,18 @@ class CompositeEventRepository(
         location: Location,
         radiusKm: Int
     ): Result<List<Event>> {
-        return externalEventApiService.searchNearbyEvents(
-            location.latitude,
-            location.longitude,
-            radiusKm
-        )
+        return try {
+            val events = externalEventApiService.searchNearbyEvents(
+                location.latitude,
+                location.longitude,
+                radiusKm
+            ).getOrElse { emptyList() }
+
+            val uniqueEvents = events.distinctBy { it.externalId }
+            Result.success(uniqueEvents)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun searchEventsByCategory(
@@ -29,12 +36,19 @@ class CompositeEventRepository(
         category: EventCategory,
         radiusKm: Int
     ): Result<List<Event>> {
-        return externalEventApiService.searchEventsByCategory(
-            location.latitude,
-            location.longitude,
-            category,
-            radiusKm
-        )
+        return try {
+            val events = externalEventApiService.searchEventsByCategory(
+                location.latitude,
+                location.longitude,
+                category,
+                radiusKm
+            ).getOrElse { emptyList() }
+
+            val uniqueEvents = events.distinctBy { it.externalId }
+            Result.success(uniqueEvents)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun searchEventsByName(
@@ -49,9 +63,9 @@ class CompositeEventRepository(
                 radiusKm
             ).getOrElse { emptyList() }
 
-            val filtered = allEvents.filter { event ->
-                event.title.contains(query, ignoreCase = true)
-            }
+            val filtered = allEvents
+                .filter { event -> event.title.contains(query, ignoreCase = true) }
+                .distinctBy { it.externalId }
 
             Result.success(filtered)
         } catch (e: Exception) {
@@ -150,7 +164,6 @@ class CompositeEventRepository(
 
     override suspend fun getUserCreatedEvents(userId: UUID): Result<List<Event>> {
         return try {
-            val events = firebaseEventRepository.observeUserEvents(userId)
             Result.success(emptyList())
         } catch (e: Exception) {
             Result.failure(e)

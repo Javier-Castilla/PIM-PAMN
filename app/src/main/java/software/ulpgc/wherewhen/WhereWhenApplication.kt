@@ -18,6 +18,7 @@ import software.ulpgc.wherewhen.domain.usecases.chat.*
 import software.ulpgc.wherewhen.domain.usecases.events.*
 import software.ulpgc.wherewhen.infrastructure.api.TicketmasterExternalEventApiService
 import software.ulpgc.wherewhen.infrastructure.location.AndroidLocationService
+import software.ulpgc.wherewhen.infrastructure.persistence.CachedEventRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.CompositeEventRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseAuthenticationRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseUserRepository
@@ -100,8 +101,14 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     private val eventRepository: EventRepository by lazy {
-        CompositeEventRepository(TicketmasterExternalEventApiService(), FirebaseEventRepository())
+        CachedEventRepository(
+            CompositeEventRepository(
+                TicketmasterExternalEventApiService(),
+                FirebaseEventRepository()
+            )
+        )
     }
+
 
     override val locationService: LocationService by lazy {
         AndroidLocationService(context)
