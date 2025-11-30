@@ -31,6 +31,10 @@ import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatViewModel
 import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatsViewModel
 import software.ulpgc.wherewhen.presentation.chat.ChatViewModelFactory
 import software.ulpgc.wherewhen.presentation.chat.ChatsViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,7 +80,6 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-
             authState == null && showRegister -> {
                 val registerViewModel: JetpackComposeRegisterViewModel = viewModel(
                     factory = RegisterViewModelFactory(appContainer.registerUserUseCase)
@@ -92,7 +95,6 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-
             else -> {
                 val socialViewModel: JetpackComposeSocialViewModel = viewModel(
                     key = "social_$userId",
@@ -131,11 +133,35 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
+                val eventsViewModel: JetpackComposeEventsViewModel = viewModel(
+                    key = "events_$userId",
+                    factory = EventsViewModelFactory(
+                        appContainer.searchNearbyEventsUseCase,
+                        appContainer.searchEventsByNameUseCase,
+                        appContainer.searchEventsByCategoryUseCase,
+                        appContainer.getUserJoinedEventsUseCase,
+                        appContainer.getUserCreatedEventsUseCase,
+                        appContainer.locationService
+                    )
+                )
+
+                val eventDetailViewModel: JetpackComposeEventDetailViewModel = viewModel(
+                    key = "event_detail_$userId",
+                    factory = EventDetailViewModelFactory(
+                        appContainer.getEventByIdUseCase,
+                        appContainer.joinEventUseCase,
+                        appContainer.leaveEventUseCase,
+                        appContainer.getEventAttendeesUseCase
+                    )
+                )
+
                 MainScreen(
                     socialViewModel = socialViewModel,
                     profileViewModel = profileViewModel,
                     chatsViewModel = chatsViewModel,
                     chatViewModel = chatViewModel,
+                    eventsViewModel = eventsViewModel,
+                    eventDetailViewModel = eventDetailViewModel,
                     onLogout = {
                         FirebaseAuth.getInstance().signOut()
                         authState = null

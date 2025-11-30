@@ -1,8 +1,17 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -18,7 +27,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val ticketmasterKey = project.findProperty("TICKETMASTER_API_KEY") as String? ?: ""
+        val ticketmasterKey = localProperties.getProperty("TICKETMASTER_API_KEY") ?: ""
+        println("========================================")
+        println("DEBUG: API Key loaded = '${ticketmasterKey.take(10)}...'")
+        println("DEBUG: API Key length = ${ticketmasterKey.length}")
+        println("========================================")
         buildConfigField("String", "TICKETMASTER_API_KEY", "\"$ticketmasterKey\"")
     }
 
@@ -77,6 +90,8 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
+
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -3,6 +3,7 @@ package software.ulpgc.wherewhen
 import android.app.Application
 import android.content.Context
 import com.google.firebase.FirebaseApp
+import software.ulpgc.wherewhen.domain.ports.location.LocationService
 import software.ulpgc.wherewhen.domain.ports.persistence.AuthenticationRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
@@ -14,16 +15,9 @@ import software.ulpgc.wherewhen.domain.services.TokenService
 import software.ulpgc.wherewhen.domain.usecases.user.*
 import software.ulpgc.wherewhen.domain.usecases.friendship.*
 import software.ulpgc.wherewhen.domain.usecases.chat.*
-import software.ulpgc.wherewhen.domain.usecases.events.GetEventAttendeesUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.GetEventByIdUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.GetUserCreatedEventsUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.GetUserJoinedEventsUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.JoinEventUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.LeaveEventUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.SearchEventsByCategoryUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.SearchEventsByNameUseCase
-import software.ulpgc.wherewhen.domain.usecases.events.SearchNearbyEventsUseCase
+import software.ulpgc.wherewhen.domain.usecases.events.*
 import software.ulpgc.wherewhen.infrastructure.api.TicketmasterExternalEventApiService
+import software.ulpgc.wherewhen.infrastructure.location.AndroidLocationService
 import software.ulpgc.wherewhen.infrastructure.persistence.CompositeEventRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseAuthenticationRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseUserRepository
@@ -64,20 +58,19 @@ interface AppContainer {
     val getChatMessagesUseCase: GetChatMessagesUseCase
     val sendMessageUseCase: SendMessageUseCase
     val markMessagesAsReadUseCase: MarkMessagesAsReadUseCase
-
-    val searchNearbyEvents: SearchNearbyEventsUseCase
-    val searchEventsByCategory: SearchEventsByCategoryUseCase
-    val searchEventsByName: SearchEventsByNameUseCase
-    val getEventById: GetEventByIdUseCase
-    val joinEvent: JoinEventUseCase
-    val leaveEvent: LeaveEventUseCase
-    val getEventAttendees: GetEventAttendeesUseCase
-    val getUserJoinedEvents: GetUserJoinedEventsUseCase
-    val getUserCreatedEvents: GetUserCreatedEventsUseCase
+    val searchNearbyEventsUseCase: SearchNearbyEventsUseCase
+    val searchEventsByCategoryUseCase: SearchEventsByCategoryUseCase
+    val searchEventsByNameUseCase: SearchEventsByNameUseCase
+    val getEventByIdUseCase: GetEventByIdUseCase
+    val joinEventUseCase: JoinEventUseCase
+    val leaveEventUseCase: LeaveEventUseCase
+    val getEventAttendeesUseCase: GetEventAttendeesUseCase
+    val getUserJoinedEventsUseCase: GetUserJoinedEventsUseCase
+    val getUserCreatedEventsUseCase: GetUserCreatedEventsUseCase
+    val locationService: LocationService
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
-
     private val tokenService: TokenService by lazy {
         MockTokenService()
     }
@@ -108,6 +101,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     private val eventRepository: EventRepository by lazy {
         CompositeEventRepository(TicketmasterExternalEventApiService(), FirebaseEventRepository())
+    }
+
+    override val locationService: LocationService by lazy {
+        AndroidLocationService(context)
     }
 
     override val authenticateUserUseCase: AuthenticateUserUseCase by lazy {
@@ -181,37 +178,40 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     override val markMessagesAsReadUseCase: MarkMessagesAsReadUseCase by lazy {
         MarkMessagesAsReadUseCase(messageRepository, chatRepository)
     }
-    override val searchNearbyEvents: SearchNearbyEventsUseCase by lazy {
+
+    override val searchNearbyEventsUseCase: SearchNearbyEventsUseCase by lazy {
         SearchNearbyEventsUseCase(eventRepository)
     }
-    override val searchEventsByCategory: SearchEventsByCategoryUseCase by lazy {
+
+    override val searchEventsByCategoryUseCase: SearchEventsByCategoryUseCase by lazy {
         SearchEventsByCategoryUseCase(eventRepository)
     }
-    override val searchEventsByName: SearchEventsByNameUseCase by lazy {
+
+    override val searchEventsByNameUseCase: SearchEventsByNameUseCase by lazy {
         SearchEventsByNameUseCase(eventRepository)
     }
 
-    override val getEventById: GetEventByIdUseCase by lazy {
+    override val getEventByIdUseCase: GetEventByIdUseCase by lazy {
         GetEventByIdUseCase(eventRepository)
     }
 
-    override val joinEvent: JoinEventUseCase by lazy {
+    override val joinEventUseCase: JoinEventUseCase by lazy {
         JoinEventUseCase(eventRepository)
     }
 
-    override val leaveEvent: LeaveEventUseCase by lazy {
+    override val leaveEventUseCase: LeaveEventUseCase by lazy {
         LeaveEventUseCase(eventRepository)
     }
 
-    override val getEventAttendees: GetEventAttendeesUseCase by lazy {
+    override val getEventAttendeesUseCase: GetEventAttendeesUseCase by lazy {
         GetEventAttendeesUseCase(eventRepository)
     }
 
-    override val getUserJoinedEvents: GetUserJoinedEventsUseCase by lazy {
+    override val getUserJoinedEventsUseCase: GetUserJoinedEventsUseCase by lazy {
         GetUserJoinedEventsUseCase(eventRepository)
     }
 
-    override val getUserCreatedEvents: GetUserCreatedEventsUseCase by lazy {
+    override val getUserCreatedEventsUseCase: GetUserCreatedEventsUseCase by lazy {
         GetUserCreatedEventsUseCase(eventRepository)
     }
 }
