@@ -1,5 +1,7 @@
 package software.ulpgc.wherewhen.domain.usecases.events
 
+import software.ulpgc.wherewhen.domain.exceptions.events.EventNotFoundException
+import software.ulpgc.wherewhen.domain.exceptions.events.InvalidEventException
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.Location
 import software.ulpgc.wherewhen.domain.ports.persistence.EventRepository
@@ -9,7 +11,6 @@ import java.time.LocalDateTime
 class UpdateUserEventUseCase(
     private val eventRepository: EventRepository
 ) {
-
     suspend operator fun invoke(
         eventId: UUID,
         newTitle: String? = null,
@@ -18,23 +19,29 @@ class UpdateUserEventUseCase(
         newEndDateTime: LocalDateTime? = null
     ): Result<Event> {
         return try {
-            // 1. Load the original event
-            val existingEventResult = eventRepository.getEventById(eventId)
-            val existingEvent = existingEventResult.getOrElse {
-                return Result.failure(it)
+            val existingEvent = eventRepository.getEventById(eventId)
+                .getOrElse { throw EventNotFoundException(eventId.value) }
+
+            val title = newTitle ?: existingEvent.title
+            if (title.isBlank()) {
+                throw InvalidEventException("Event title cannot be empty")
             }
 
-            // 2. Create the updated event
+            val dateTime = newDateTime ?: existingEvent.dateTime
+            val endDateTime = newEndDateTime ?: existingEvent.endDateTime
+
+            if (endDateTime != null && endDateTime.isBefore(dateTime)) {
+                throw InvalidEventException("End date must be after start date")
+            }
+
             val updatedEvent = existingEvent.copy(
-                title = newTitle ?: existingEvent.title,
+                title = title,
                 location = newLocation ?: existingEvent.location,
-                dateTime = newDateTime ?: existingEvent.dateTime,
-                endDateTime = newEndDateTime ?: existingEvent.endDateTime
+                dateTime = dateTime,
+                endDateTime = endDateTime
             )
 
-            // 3. Save update
             eventRepository.updateUserEvent(updatedEvent)
-
         } catch (e: Exception) {
             Result.failure(e)
         }
