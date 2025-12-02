@@ -40,15 +40,15 @@ class JetpackComposeEventDetailViewModel(
         currentEventId = eventId
         viewModelScope.launch {
             uiState = UiState.Loading
-            Log.d("EventDetailViewModel", "Cargando evento: $eventId")
+            Log.d("EventDetailViewModel", "Loading event: $eventId")
             getEventByIdUseCase(eventId).fold(
                 onSuccess = { event ->
-                    Log.d("EventDetailViewModel", "Evento cargado: ${event.title}")
+                    Log.d("EventDetailViewModel", "Event loaded: ${event.title}")
                     currentEvent = event
                     loadAttendees()
                 },
                 onFailure = { exception ->
-                    Log.e("EventDetailViewModel", "Error cargando evento", exception)
+                    Log.e("EventDetailViewModel", "Error loading event", exception)
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -60,14 +60,14 @@ class JetpackComposeEventDetailViewModel(
         val userId = getCurrentUserId() ?: return
         viewModelScope.launch {
             isJoining = true
-            Log.d("EventDetailViewModel", "Uniéndose al evento: $eventId")
+            Log.d("EventDetailViewModel", "Joining event: $eventId")
             joinEventUseCase(eventId, userId).fold(
                 onSuccess = {
-                    Log.d("EventDetailViewModel", "Unido correctamente")
+                    Log.d("EventDetailViewModel", "Joined correctly")
                     loadEvent(eventId)
                 },
                 onFailure = { exception ->
-                    Log.e("EventDetailViewModel", "Error al unirse", exception)
+                    Log.e("EventDetailViewModel", "Error joining", exception)
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -80,14 +80,14 @@ class JetpackComposeEventDetailViewModel(
         val userId = getCurrentUserId() ?: return
         viewModelScope.launch {
             isJoining = true
-            Log.d("EventDetailViewModel", "Abandonando evento: $eventId")
+            Log.d("EventDetailViewModel", "Leaving event: $eventId")
             leaveEventUseCase(eventId, userId).fold(
                 onSuccess = {
-                    Log.d("EventDetailViewModel", "Abandonado correctamente")
+                    Log.d("EventDetailViewModel", "Left correctly")
                     loadEvent(eventId)
                 },
                 onFailure = { exception ->
-                    Log.e("EventDetailViewModel", "Error al abandonar", exception)
+                    Log.e("EventDetailViewModel", "Error leaving", exception)
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -100,16 +100,16 @@ class JetpackComposeEventDetailViewModel(
         val event = currentEvent ?: return
         val userId = getCurrentUserId() ?: return
         viewModelScope.launch {
-            Log.d("EventDetailViewModel", "Cargando asistentes para: $eventId")
+            Log.d("EventDetailViewModel", "Loading attendees for: $eventId")
             val attendeesResult = getEventAttendeesUseCase(eventId)
 
             if (attendeesResult.isSuccess) {
                 val attendees = attendeesResult.getOrNull()!!
                 val isAttending = attendees.contains(userId)
-                Log.d("EventDetailViewModel", "Asistentes: ${attendees.size}, isAttending: $isAttending")
+                Log.d("EventDetailViewModel", "Attendees: ${attendees.size}, isAttending: $isAttending")
                 uiState = UiState.Success(event, isAttending, attendees.size)
             } else {
-                Log.e("EventDetailViewModel", "Error cargando asistentes", attendeesResult.exceptionOrNull())
+                Log.e("EventDetailViewModel", "Error loading attendees", attendeesResult.exceptionOrNull())
                 uiState = UiState.Success(event, false, 0)
             }
         }
@@ -122,12 +122,12 @@ class JetpackComposeEventDetailViewModel(
 
     private fun handleException(exception: Throwable): String {
         return when (exception) {
-            is EventNotFoundException -> "Evento no encontrado"
-            is EventFullException -> "El evento está lleno"
-            is AlreadyAttendingEventException -> "Ya estás asistiendo a este evento"
-            is NotAttendingEventException -> "No estás asistiendo a este evento"
-            is UnauthorizedEventAccessException -> "No tienes permiso para acceder"
-            else -> "Error al procesar la solicitud: ${exception.message}"
+            is EventNotFoundException -> "Event not found"
+            is EventFullException -> "Event is full"
+            is AlreadyAttendingEventException -> "You are already attending this event"
+            is NotAttendingEventException -> "You are not attending this event"
+            is UnauthorizedEventAccessException -> "You have no permission you access"
+            else -> "Error processing request: ${exception.message}"
         }
     }
 }

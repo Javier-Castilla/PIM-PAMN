@@ -104,9 +104,9 @@ class JetpackComposeEventsViewModel(
 
     override fun loadNearbyEvents() {
         val location = currentLocation
-        println("UBICACIÓN ACTUAL: ${location?.latitude}, ${location?.longitude} - ${location?.address}")
+        println("CURRENT LOCATION: ${location?.latitude}, ${location?.longitude} - ${location?.address}")
         if (location == null) {
-            uiState = UiState.Error("No se pudo obtener la ubicación")
+            uiState = UiState.Error("Location could not be obtained")
             return
         }
         viewModelScope.launch {
@@ -125,7 +125,7 @@ class JetpackComposeEventsViewModel(
     override fun loadMyEvents() {
         viewModelScope.launch {
             val userId = getCurrentUserId() ?: run {
-                uiState = UiState.Error("Usuario no autenticado")
+                uiState = UiState.Error("User not authenticated")
                 return@launch
             }
             uiState = UiState.Loading
@@ -196,10 +196,10 @@ class JetpackComposeEventsViewModel(
 
     private fun handleException(exception: Throwable): String {
         return when (exception) {
-            is LocationPermissionDeniedException -> "Permiso de ubicación denegado"
-            is LocationUnavailableException -> "No se pudo obtener la ubicación"
-            is EventNotFoundException -> "Evento no encontrado"
-            else -> "Error al cargar eventos"
+            is LocationPermissionDeniedException -> "Location permissions denied"
+            is LocationUnavailableException -> "Location could not be obtained"
+            is EventNotFoundException -> "Event not found"
+            else -> "Error loading event"
         }
     }
 }

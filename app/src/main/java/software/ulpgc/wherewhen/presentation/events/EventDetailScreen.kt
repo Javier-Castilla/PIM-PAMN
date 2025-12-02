@@ -32,10 +32,10 @@ fun EventDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detalle del evento") },
+                title = { Text("Event details") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -80,7 +80,7 @@ fun EventDetailScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Button(onClick = { viewModel.loadEvent(eventId) }) {
-                            Text("Reintentar")
+                            Text("Retry")
                         }
                     }
                 }
@@ -134,7 +134,7 @@ private fun EventDetailContent(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = event.dateTime.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy 'a las' HH:mm")),
+                    text = event.dateTime.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy 'at' HH:mm")),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -149,7 +149,7 @@ private fun EventDetailContent(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = event.location.formatAddress().takeIf { it.isNotEmpty() } ?: "Ubicación no disponible",
+                    text = event.location.formatAddress().takeIf { it.isNotEmpty() } ?: "Location not available",
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -165,7 +165,7 @@ private fun EventDetailContent(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "$attendeesCount asistentes",
+                        text = "$attendeesCount attendees",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -196,7 +196,7 @@ private fun EventDetailContent(
                             tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = "Evento externo de Ticketmaster",
+                            text = "Ticketmaster external event",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -209,7 +209,7 @@ private fun EventDetailContent(
             event.description?.let { description ->
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Descripción",
+                        text = "Description",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -234,7 +234,7 @@ private fun EventDetailContent(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ver en Ticketmaster")
+                    Text("See at Ticketmaster")
                 }
             }
 
@@ -263,7 +263,7 @@ private fun EventDetailContent(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isAttending) "Abandonar evento" else "Unirse al evento")
+                        Text(if (isAttending) "Leave event" else "Join event")
                     }
                 }
             }

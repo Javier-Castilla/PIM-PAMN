@@ -31,10 +31,10 @@ fun EventsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Eventos") },
+                title = { Text("Events") },
                 actions = {
                     IconButton(onClick = { viewModel.onRefresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 }
             )
@@ -49,12 +49,12 @@ fun EventsScreen(
                 Tab(
                     selected = viewModel.selectedTab == 0,
                     onClick = { viewModel.onTabSelected(0) },
-                    text = { Text("Cercanos") }
+                    text = { Text("Nearby") }
                 )
                 Tab(
                     selected = viewModel.selectedTab == 1,
                     onClick = { viewModel.onTabSelected(1) },
-                    text = { Text("Mis eventos") }
+                    text = { Text("My events") }
                 )
             }
 
@@ -93,9 +93,9 @@ fun EventsScreen(
                         ) {
                             Text(
                                 text = if (viewModel.selectedTab == 0)
-                                    "No hay eventos cercanos"
+                                    "There are no nearby events"
                                 else
-                                    "No te has unido a ningún evento",
+                                    "You have not got any joined events",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -122,7 +122,7 @@ fun EventsScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Button(onClick = { viewModel.onRefresh() }) {
-                                Text("Reintentar")
+                                Text("Retry")
                             }
                         }
                     }
@@ -145,14 +145,14 @@ private fun SearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = { Text("Buscar eventos...") },
+        placeholder = { Text("Search events...") },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null)
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClearSearch) {
-                    Icon(Icons.Default.Clear, contentDescription = "Limpiar búsqueda")
+                    Icon(Icons.Default.Clear, contentDescription = "Clean search")
                 }
             }
         },
@@ -176,7 +176,7 @@ private fun RadiusControl(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Radio de búsqueda",
+                text = "Search radius",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
@@ -208,7 +208,7 @@ private fun CategoryFilter(
             FilterChip(
                 selected = selectedCategory == null,
                 onClick = { onCategorySelected(null) },
-                label = { Text("Todos") }
+                label = { Text("All") }
             )
         }
         items(EventCategory.values()) { category ->
@@ -285,7 +285,7 @@ private fun EventCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = event.location.formatAddress().takeIf { it.isNotEmpty() } ?: "Ubicación no disponible",
+                        text = event.location.formatAddress().takeIf { it.isNotEmpty() } ?: "Location not available",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
