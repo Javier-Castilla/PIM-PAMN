@@ -4,13 +4,12 @@ import kotlinx.coroutines.flow.Flow
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventCategory
 import software.ulpgc.wherewhen.domain.model.events.Location
-import software.ulpgc.wherewhen.domain.ports.persistence.EventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.ExternalEventRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 
 class CachedEventRepository(
-    private val decorated: EventRepository
-) : EventRepository {
-
+    private val decorated: ExternalEventRepository
+) : ExternalEventRepository {
     private val eventCache = mutableMapOf<String, Event>()
 
     override suspend fun searchNearbyEvents(

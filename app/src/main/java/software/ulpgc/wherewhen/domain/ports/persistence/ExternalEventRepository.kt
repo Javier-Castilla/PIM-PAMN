@@ -6,7 +6,7 @@ import software.ulpgc.wherewhen.domain.model.events.Location
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import kotlinx.coroutines.flow.Flow
 
-interface EventRepository {
+interface ExternalEventRepository {
     suspend fun searchNearbyEvents(
         location: Location,
         radiusKm: Int = 25

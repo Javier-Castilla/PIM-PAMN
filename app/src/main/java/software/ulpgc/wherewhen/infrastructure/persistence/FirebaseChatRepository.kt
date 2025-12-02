@@ -32,6 +32,7 @@ class FirebaseChatRepository(
     override suspend fun createOrGetChat(userId1: UUID, userId2: UUID): Result<Chat> = runCatching {
         val sortedIds = listOf(userId1.value, userId2.value).sorted()
         val chatDocId = "${sortedIds[0]}_${sortedIds[1]}"
+
         val document = firestore.collection(COLLECTION)
             .document(chatDocId)
             .get()
@@ -130,7 +131,7 @@ class FirebaseChatRepository(
 
     override suspend fun incrementUnreadCount(chatId: UUID, userId: UUID): Result<Unit> = runCatching {
         val chat = getChat(chatId).getOrThrow()
-        val field = if (chat.participant1Id == userId) FIELD_UNREAD_COUNT_1 else FIELD_UNREAD_COUNT_2
+        val field = if (chat.participant1Id == userId) FIELD_UNREAD_COUNT_2 else FIELD_UNREAD_COUNT_1
 
         val querySnapshot = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_ID, chatId.value)

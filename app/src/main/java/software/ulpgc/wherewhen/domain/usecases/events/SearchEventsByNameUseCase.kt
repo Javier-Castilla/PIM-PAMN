@@ -3,10 +3,10 @@ package software.ulpgc.wherewhen.domain.usecases.events
 import software.ulpgc.wherewhen.domain.exceptions.events.InvalidEventException
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.Location
-import software.ulpgc.wherewhen.domain.ports.persistence.EventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.ExternalEventRepository
 
 class SearchEventsByNameUseCase(
-    private val eventRepository: EventRepository
+    private val externalEventRepository: ExternalEventRepository
 ) {
     suspend operator fun invoke(
         location: Location,
@@ -22,7 +22,7 @@ class SearchEventsByNameUseCase(
                 throw InvalidEventException("Radius must be between 1 and 500 km")
             }
 
-            eventRepository.searchEventsByName(location, query, radiusKm)
+            externalEventRepository.searchEventsByName(location, query, radiusKm)
         } catch (e: Exception) {
             Result.failure(e)
         }

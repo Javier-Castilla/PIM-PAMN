@@ -11,8 +11,10 @@ import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.presentation.events.EventsScreen
 import software.ulpgc.wherewhen.presentation.events.EventDetailScreen
+import software.ulpgc.wherewhen.presentation.events.CreateEventScreen
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.social.SocialScreen
 import software.ulpgc.wherewhen.presentation.social.JetpackComposeSocialViewModel
 import software.ulpgc.wherewhen.presentation.profile.ProfileScreen
@@ -30,15 +32,18 @@ fun MainScreen(
     chatViewModel: JetpackComposeChatViewModel,
     eventsViewModel: JetpackComposeEventsViewModel,
     eventDetailViewModel: JetpackComposeEventDetailViewModel,
+    createEventViewModel: JetpackComposeCreateEventViewModel,
     onLogout: () -> Unit,
     onBackPressed: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var selectedChatUser by remember { mutableStateOf<User?>(null) }
     var selectedEventId by remember { mutableStateOf<UUID?>(null) }
+    var isCreatingEvent by remember { mutableStateOf(false) }
 
     BackHandler(enabled = true) {
         when {
+            isCreatingEvent -> isCreatingEvent = false
             selectedEventId != null -> selectedEventId = null
             selectedChatUser != null -> selectedChatUser = null
             else -> onBackPressed()
@@ -51,6 +56,17 @@ fun MainScreen(
     }
 
     when {
+        isCreatingEvent -> {
+            CreateEventScreen(
+                viewModel = createEventViewModel,
+                onNavigateBack = { isCreatingEvent = false },
+                onEventCreated = {
+                    isCreatingEvent = false
+                    eventsViewModel.onRefresh()
+                }
+            )
+        }
+
         selectedEventId != null -> {
             EventDetailScreen(
                 viewModel = eventDetailViewModel,
@@ -58,6 +74,7 @@ fun MainScreen(
                 onNavigateBack = { selectedEventId = null }
             )
         }
+
         selectedChatUser != null -> {
             ChatScreen(
                 viewModel = chatViewModel,
@@ -65,6 +82,7 @@ fun MainScreen(
                 onBackClick = { selectedChatUser = null }
             )
         }
+
         else -> {
             Scaffold(
                 bottomBar = {
@@ -75,6 +93,7 @@ fun MainScreen(
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0 }
                         )
+
                         NavigationBarItem(
                             icon = {
                                 BadgedBox(
@@ -93,6 +112,7 @@ fun MainScreen(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 }
                         )
+
                         NavigationBarItem(
                             icon = {
                                 BadgedBox(
@@ -111,6 +131,7 @@ fun MainScreen(
                             selected = selectedTab == 2,
                             onClick = { selectedTab = 2 }
                         )
+
                         NavigationBarItem(
                             icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
                             label = { Text("Profile") },
@@ -124,20 +145,24 @@ fun MainScreen(
                     when (selectedTab) {
                         0 -> EventsScreen(
                             viewModel = eventsViewModel,
-                            onEventClick = { eventId -> selectedEventId = eventId }
+                            onEventClick = { eventId -> selectedEventId = eventId },
+                            onCreateEventClick = { isCreatingEvent = true }
                         )
+
                         1 -> SocialScreen(
                             viewModel = socialViewModel,
                             onMessageClick = { friend ->
                                 selectedChatUser = friend
                             }
                         )
+
                         2 -> ChatsScreen(
                             viewModel = chatsViewModel,
                             onChatClick = { chatWithUser ->
                                 selectedChatUser = chatWithUser.otherUser
                             }
                         )
+
                         3 -> ProfileScreen(
                             viewModel = profileViewModel,
                             onLogout = onLogout

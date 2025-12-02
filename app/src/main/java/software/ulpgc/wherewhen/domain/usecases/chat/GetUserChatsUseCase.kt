@@ -24,7 +24,7 @@ class GetUserChatsUseCase(
                     lastMessageAt = chat.lastMessageAt,
                     unreadCount = chat.getUnreadCount(userId)
                 )
-            }.sortedByDescending { it.lastMessageAt }
+            }
         }
     }
 }

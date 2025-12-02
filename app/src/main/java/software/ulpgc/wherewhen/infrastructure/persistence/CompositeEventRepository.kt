@@ -5,27 +5,38 @@ import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventCategory
 import software.ulpgc.wherewhen.domain.model.events.Location
 import software.ulpgc.wherewhen.domain.ports.api.ExternalEventApiService
-import software.ulpgc.wherewhen.domain.ports.persistence.EventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.ExternalEventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.UserEventRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 
 class CompositeEventRepository(
     private val externalEventApiService: ExternalEventApiService,
-    private val firebaseEventRepository: FirebaseEventRepository
-) : EventRepository {
+    private val userEventRepository: UserEventRepository
+) : ExternalEventRepository {
 
     override suspend fun searchNearbyEvents(
         location: Location,
         radiusKm: Int
     ): Result<List<Event>> {
         return try {
-            val events = externalEventApiService.searchNearbyEvents(
+            val externalEvents = externalEventApiService.searchNearbyEvents(
                 location.latitude,
                 location.longitude,
                 radiusKm
             ).getOrElse { emptyList() }
 
-            val uniqueEvents = events.distinctBy { it.externalId }
-            Result.success(uniqueEvents)
+            val userEvents = userEventRepository.getUserEventsByLocation(
+                UUID.random(),
+                location.latitude,
+                location.longitude,
+                radiusKm.toDouble()
+            ).getOrElse { emptyList() }
+
+            val combined = (externalEvents + userEvents)
+                .distinctBy { it.id }
+                .sortedBy { it.dateTime }
+
+            Result.success(combined)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -37,15 +48,26 @@ class CompositeEventRepository(
         radiusKm: Int
     ): Result<List<Event>> {
         return try {
-            val events = externalEventApiService.searchEventsByCategory(
+            val externalEvents = externalEventApiService.searchEventsByCategory(
                 location.latitude,
                 location.longitude,
                 category,
                 radiusKm
             ).getOrElse { emptyList() }
 
-            val uniqueEvents = events.distinctBy { it.externalId }
-            Result.success(uniqueEvents)
+            val userEvents = userEventRepository.getUserEventsByLocation(
+                UUID.random(),
+                location.latitude,
+                location.longitude,
+                radiusKm.toDouble()
+            ).getOrElse { emptyList() }
+                .filter { it.category == category }
+
+            val combined = (externalEvents + userEvents)
+                .distinctBy { it.id }
+                .sortedBy { it.dateTime }
+
+            Result.success(combined)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -57,17 +79,26 @@ class CompositeEventRepository(
         radiusKm: Int
     ): Result<List<Event>> {
         return try {
-            val allEvents = externalEventApiService.searchNearbyEvents(
+            val externalEvents = externalEventApiService.searchNearbyEvents(
                 location.latitude,
                 location.longitude,
                 radiusKm
             ).getOrElse { emptyList() }
-
-            val filtered = allEvents
                 .filter { event -> event.title.contains(query, ignoreCase = true) }
-                .distinctBy { it.externalId }
 
-            Result.success(filtered)
+            val userEvents = userEventRepository.getUserEventsByLocation(
+                UUID.random(),
+                location.latitude,
+                location.longitude,
+                radiusKm.toDouble()
+            ).getOrElse { emptyList() }
+                .filter { event -> event.title.contains(query, ignoreCase = true) }
+
+            val combined = (externalEvents + userEvents)
+                .distinctBy { it.id }
+                .sortedBy { it.dateTime }
+
+            Result.success(combined)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -84,7 +115,7 @@ class CompositeEventRepository(
                 radiusKm
             ).getOrElse { emptyList() }
 
-            val userEvents = firebaseEventRepository.getUserEventsByLocation(
+            val userEvents = userEventRepository.getUserEventsByLocation(
                 UUID.random(),
                 location.latitude,
                 location.longitude,
@@ -111,7 +142,7 @@ class CompositeEventRepository(
                 radiusKm
             ).getOrElse { emptyList() }
 
-            val userEvents = firebaseEventRepository.getUserEventsByLocation(
+            val userEvents = userEventRepository.getUserEventsByLocation(
                 UUID.random(),
                 location.latitude,
                 location.longitude,
@@ -127,46 +158,42 @@ class CompositeEventRepository(
     }
 
     override suspend fun getEventById(eventId: UUID): Result<Event> {
-        return firebaseEventRepository.getEventById(eventId)
+        return userEventRepository.getEventById(eventId)
     }
 
     override suspend fun createUserEvent(event: Event): Result<Event> {
-        return firebaseEventRepository.createUserEvent(event)
+        return userEventRepository.createUserEvent(event)
     }
 
     override suspend fun updateUserEvent(event: Event): Result<Event> {
-        return firebaseEventRepository.updateUserEvent(event)
+        return userEventRepository.updateUserEvent(event)
     }
 
     override suspend fun deleteUserEvent(eventId: UUID): Result<Unit> {
-        return firebaseEventRepository.deleteUserEvent(eventId)
+        return userEventRepository.deleteUserEvent(eventId)
     }
 
     override fun observeUserEvents(organizerId: UUID): Flow<List<Event>> {
-        return firebaseEventRepository.observeUserEvents(organizerId)
+        return userEventRepository.observeUserEvents(organizerId)
     }
 
     override suspend fun joinEvent(eventId: UUID, userId: UUID): Result<Unit> {
-        return firebaseEventRepository.joinEvent(eventId, userId)
+        return userEventRepository.joinEvent(eventId, userId)
     }
 
     override suspend fun leaveEvent(eventId: UUID, userId: UUID): Result<Unit> {
-        return firebaseEventRepository.leaveEvent(eventId, userId)
+        return userEventRepository.leaveEvent(eventId, userId)
     }
 
     override suspend fun getEventAttendees(eventId: UUID): Result<List<UUID>> {
-        return firebaseEventRepository.getEventAttendees(eventId)
+        return userEventRepository.getEventAttendees(eventId)
     }
 
     override suspend fun getUserJoinedEvents(userId: UUID): Result<List<Event>> {
-        return firebaseEventRepository.getUserJoinedEvents(userId)
+        return userEventRepository.getUserJoinedEvents(userId)
     }
 
     override suspend fun getUserCreatedEvents(userId: UUID): Result<List<Event>> {
-        return try {
-            Result.success(emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return userEventRepository.getUserCreatedEvents(userId)
     }
 }

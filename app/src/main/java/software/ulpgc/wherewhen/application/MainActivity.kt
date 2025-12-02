@@ -37,11 +37,12 @@ import software.ulpgc.wherewhen.presentation.chat.ChatViewModelFactory
 import software.ulpgc.wherewhen.presentation.chat.ChatsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.CreateEventViewModelFactory
 
 class MainActivity : ComponentActivity() {
-
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -60,12 +61,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         requestLocationPermissions()
-
         enableEdgeToEdge()
+
         setContent {
             WindowInsets.safeDrawing
+
             WhereWhenTheme {
                 Surface(
                     modifier = Modifier
@@ -123,6 +124,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             authState == null && showRegister -> {
                 val registerViewModel: JetpackComposeRegisterViewModel = viewModel(
                     factory = RegisterViewModelFactory(appContainer.registerUserUseCase)
@@ -138,6 +140,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             else -> {
                 val socialViewModel: JetpackComposeSocialViewModel = viewModel(
                     key = "social_$userId",
@@ -198,6 +201,14 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
+                val createEventViewModel: JetpackComposeCreateEventViewModel = viewModel(
+                    key = "create_event_$userId",
+                    factory = CreateEventViewModelFactory(
+                        appContainer.createUserEventUseCase,
+                        appContainer.locationService
+                    )
+                )
+
                 MainScreen(
                     socialViewModel = socialViewModel,
                     profileViewModel = profileViewModel,
@@ -205,6 +216,7 @@ class MainActivity : ComponentActivity() {
                     chatViewModel = chatViewModel,
                     eventsViewModel = eventsViewModel,
                     eventDetailViewModel = eventDetailViewModel,
+                    createEventViewModel = createEventViewModel,
                     onLogout = {
                         FirebaseAuth.getInstance().signOut()
                         authState = null

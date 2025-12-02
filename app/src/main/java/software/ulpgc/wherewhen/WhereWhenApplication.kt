@@ -9,7 +9,7 @@ import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
-import software.ulpgc.wherewhen.domain.ports.persistence.EventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.ExternalEventRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.services.TokenService
 import software.ulpgc.wherewhen.domain.usecases.user.*
@@ -68,6 +68,7 @@ interface AppContainer {
     val getEventAttendeesUseCase: GetEventAttendeesUseCase
     val getUserJoinedEventsUseCase: GetUserJoinedEventsUseCase
     val getUserCreatedEventsUseCase: GetUserCreatedEventsUseCase
+    val createUserEventUseCase: CreateUserEventUseCase
     val locationService: LocationService
 }
 
@@ -100,7 +101,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         FirebaseMessageRepository()
     }
 
-    private val eventRepository: EventRepository by lazy {
+    private val externalEventRepository: ExternalEventRepository by lazy {
         CachedEventRepository(
             CompositeEventRepository(
                 TicketmasterExternalEventApiService(),
@@ -108,7 +109,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
             )
         )
     }
-
 
     override val locationService: LocationService by lazy {
         AndroidLocationService(context)
@@ -167,7 +167,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val createOrGetChatUseCase: CreateOrGetChatUseCase by lazy {
-        CreateOrGetChatUseCase(chatRepository)
+        CreateOrGetChatUseCase(chatRepository, userRepository)
     }
 
     override val getUserChatsUseCase: GetUserChatsUseCase by lazy {
@@ -179,46 +179,50 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val sendMessageUseCase: SendMessageUseCase by lazy {
-        SendMessageUseCase(messageRepository, chatRepository)
+        SendMessageUseCase(chatRepository, messageRepository)
     }
 
     override val markMessagesAsReadUseCase: MarkMessagesAsReadUseCase by lazy {
-        MarkMessagesAsReadUseCase(messageRepository, chatRepository)
+        MarkMessagesAsReadUseCase(chatRepository, messageRepository)
     }
 
     override val searchNearbyEventsUseCase: SearchNearbyEventsUseCase by lazy {
-        SearchNearbyEventsUseCase(eventRepository)
+        SearchNearbyEventsUseCase(externalEventRepository)
     }
 
     override val searchEventsByCategoryUseCase: SearchEventsByCategoryUseCase by lazy {
-        SearchEventsByCategoryUseCase(eventRepository)
+        SearchEventsByCategoryUseCase(externalEventRepository)
     }
 
     override val searchEventsByNameUseCase: SearchEventsByNameUseCase by lazy {
-        SearchEventsByNameUseCase(eventRepository)
+        SearchEventsByNameUseCase(externalEventRepository)
     }
 
     override val getEventByIdUseCase: GetEventByIdUseCase by lazy {
-        GetEventByIdUseCase(eventRepository)
+        GetEventByIdUseCase(externalEventRepository)
     }
 
     override val joinEventUseCase: JoinEventUseCase by lazy {
-        JoinEventUseCase(eventRepository)
+        JoinEventUseCase(externalEventRepository)
     }
 
     override val leaveEventUseCase: LeaveEventUseCase by lazy {
-        LeaveEventUseCase(eventRepository)
+        LeaveEventUseCase(externalEventRepository)
     }
 
     override val getEventAttendeesUseCase: GetEventAttendeesUseCase by lazy {
-        GetEventAttendeesUseCase(eventRepository)
+        GetEventAttendeesUseCase(externalEventRepository)
     }
 
     override val getUserJoinedEventsUseCase: GetUserJoinedEventsUseCase by lazy {
-        GetUserJoinedEventsUseCase(eventRepository)
+        GetUserJoinedEventsUseCase(externalEventRepository)
     }
 
     override val getUserCreatedEventsUseCase: GetUserCreatedEventsUseCase by lazy {
-        GetUserCreatedEventsUseCase(eventRepository)
+        GetUserCreatedEventsUseCase(externalEventRepository)
+    }
+
+    override val createUserEventUseCase: CreateUserEventUseCase by lazy {
+        CreateUserEventUseCase(externalEventRepository)
     }
 }

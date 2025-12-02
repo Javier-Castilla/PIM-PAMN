@@ -4,12 +4,12 @@ import software.ulpgc.wherewhen.domain.exceptions.events.EventNotFoundException
 import software.ulpgc.wherewhen.domain.exceptions.events.InvalidEventException
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.Location
-import software.ulpgc.wherewhen.domain.ports.persistence.EventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.ExternalEventRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.LocalDateTime
 
 class UpdateUserEventUseCase(
-    private val eventRepository: EventRepository
+    private val externalEventRepository: ExternalEventRepository
 ) {
     suspend operator fun invoke(
         eventId: UUID,
@@ -19,7 +19,7 @@ class UpdateUserEventUseCase(
         newEndDateTime: LocalDateTime? = null
     ): Result<Event> {
         return try {
-            val existingEvent = eventRepository.getEventById(eventId)
+            val existingEvent = externalEventRepository.getEventById(eventId)
                 .getOrElse { throw EventNotFoundException(eventId.value) }
 
             val title = newTitle ?: existingEvent.title
@@ -41,7 +41,7 @@ class UpdateUserEventUseCase(
                 endDateTime = endDateTime
             )
 
-            eventRepository.updateUserEvent(updatedEvent)
+            externalEventRepository.updateUserEvent(updatedEvent)
         } catch (e: Exception) {
             Result.failure(e)
         }

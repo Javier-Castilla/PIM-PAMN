@@ -26,7 +26,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun EventsScreen(
     viewModel: JetpackComposeEventsViewModel,
-    onEventClick: (UUID) -> Unit
+    onEventClick: (UUID) -> Unit,
+    onCreateEventClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -38,6 +39,14 @@ fun EventsScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreateEventClick,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Create event")
+            }
         }
     ) { paddingValues ->
         Column(
@@ -85,6 +94,7 @@ fun EventsScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is JetpackComposeEventsViewModel.UiState.Success -> {
                     if (state.events.isEmpty()) {
                         Box(
@@ -107,6 +117,7 @@ fun EventsScreen(
                         )
                     }
                 }
+
                 is JetpackComposeEventsViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -127,6 +138,7 @@ fun EventsScreen(
                         }
                     }
                 }
+
                 is JetpackComposeEventsViewModel.UiState.Idle -> {}
             }
         }
@@ -262,6 +274,7 @@ private fun EventCard(
                     contentScale = ContentScale.Crop
                 )
             }
+
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -273,7 +286,9 @@ private fun EventCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -292,7 +307,9 @@ private fun EventCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
                 Spacer(modifier = Modifier.height(4.dp))
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
