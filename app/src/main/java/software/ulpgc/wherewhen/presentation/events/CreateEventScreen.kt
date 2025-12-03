@@ -1,42 +1,98 @@
 package software.ulpgc.wherewhen.presentation.events
 
+import android.Manifest
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import androidx.compose.foundation.clickable
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Parcelable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import kotlinx.parcelize.Parcelize
 import software.ulpgc.wherewhen.domain.model.events.EventCategory
+import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+
+@Parcelize
+data class UriWrapper(val uri: Uri) : Parcelable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventScreen(
     viewModel: JetpackComposeCreateEventViewModel,
+    eventIdToEdit: UUID? = null,
     onNavigateBack: () -> Unit,
     onEventCreated: () -> Unit
 ) {
-    LaunchedEffect(viewModel.uiState) {
-        if (viewModel.uiState is JetpackComposeCreateEventViewModel.UiState.Success) {
-            onEventCreated()
+    val context = LocalContext.current
+    var tempPhotoUri by rememberSaveable { mutableStateOf<UriWrapper?>(null) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onImageSelected(it) }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempPhotoUri?.uri?.let { viewModel.onImageSelected(it) }
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val photoFile = File.createTempFile(
+                "event_photo_",
+                ".jpg",
+                context.externalCacheDir  // CAMBIADO: context.cacheDir -> context.externalCacheDir
+            )
+            val uri = FileProvider.getUriForFile(
+                context,
+                "software.ulpgc.wherewhen.fileprovider",
+                photoFile
+            )
+            tempPhotoUri = UriWrapper(uri)
+            cameraLauncher.launch(uri)
+        }
+    }
+
+    LaunchedEffect(eventIdToEdit) {
+        if (eventIdToEdit != null) {
+            viewModel.loadEventToEdit(eventIdToEdit)
+        } else {
+            viewModel.resetState()
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create Event") },
+                title = { Text(if (eventIdToEdit != null) "Edit Event" else "Create Event") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -56,12 +112,8 @@ fun CreateEventScreen(
             OutlinedTextField(
                 value = viewModel.title,
                 onValueChange = { viewModel.onTitleChange(it) },
-                label = { Text("Title *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(Icons.Default.Edit, contentDescription = null)
-                }
+                label = { Text("Event Title") },
+                modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
@@ -73,47 +125,132 @@ fun CreateEventScreen(
                 maxLines = 5
             )
 
-            CategoryDropdown(
-                selectedCategory = viewModel.selectedCategory,
-                onCategorySelected = { viewModel.onCategoryChange(it) }
-            )
-
-            Text(
-                text = "Date and Time *",
-                style = MaterialTheme.typography.titleSmall
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            var expandedCategory by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expandedCategory,
+                onExpandedChange = { expandedCategory = !expandedCategory }
             ) {
-                DateField(
-                    date = viewModel.selectedDate,
-                    onDateSelected = { viewModel.onDateChange(it) },
-                    modifier = Modifier.weight(1f)
+                OutlinedTextField(
+                    value = viewModel.selectedCategory.name,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Category") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
-                TimeField(
-                    time = viewModel.selectedTime,
-                    onTimeSelected = { viewModel.onTimeChange(it) },
-                    modifier = Modifier.weight(1f)
-                )
+
+                ExposedDropdownMenu(
+                    expanded = expandedCategory,
+                    onDismissRequest = { expandedCategory = false }
+                ) {
+                    EventCategory.values().forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.name) },
+                            onClick = {
+                                viewModel.onCategoryChange(category)
+                                expandedCategory = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            OutlinedButton(
+                onClick = {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, day ->
+                            viewModel.onDateChange(LocalDate.of(year, month + 1, day))
+                        },
+                        viewModel.selectedDate.year,
+                        viewModel.selectedDate.monthValue - 1,
+                        viewModel.selectedDate.dayOfMonth
+                    ).show()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Date: ${viewModel.selectedDate}")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hour, minute ->
+                            viewModel.onTimeChange(LocalTime.of(hour, minute))
+                        },
+                        viewModel.selectedTime.hour,
+                        viewModel.selectedTime.minute,
+                        true
+                    ).show()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Time: ${viewModel.selectedTime}")
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "End Date and Time (optional)",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f)
+                Text("Use Current Location")
+                Switch(
+                    checked = viewModel.useCurrentLocation,
+                    onCheckedChange = { viewModel.onUseCurrentLocationChange(it) }
                 )
-                if (viewModel.selectedEndDate != null) {
-                    TextButton(onClick = {
-                        viewModel.onEndDateChange(null)
-                        viewModel.onEndTimeChange(null)
-                    }) {
-                        Text("Clear")
+            }
+
+            OutlinedTextField(
+                value = viewModel.locationAddress,
+                onValueChange = { viewModel.onLocationAddressChange(it) },
+                label = { Text("Location Address") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.useCurrentLocation
+            )
+
+            OutlinedTextField(
+                value = viewModel.maxAttendees,
+                onValueChange = { viewModel.onMaxAttendeesChange(it) },
+                label = { Text("Max Attendees (optional)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = "Event Image",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            if (viewModel.selectedImageUri != null || viewModel.imageUrl.isNotBlank()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    Box {
+                        AsyncImage(
+                            model = viewModel.selectedImageUri ?: viewModel.imageUrl,
+                            contentDescription = "Event image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = {
+                                viewModel.onImageSelected(null)
+                                viewModel.onImageUrlChange("")
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove image",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -122,59 +259,105 @@ fun CreateEventScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DateField(
-                    date = viewModel.selectedEndDate ?: viewModel.selectedDate,
-                    onDateSelected = { viewModel.onEndDateChange(it) },
-                    modifier = Modifier.weight(1f),
-                    placeholder = "End date"
-                )
-                TimeField(
-                    time = viewModel.selectedEndTime ?: LocalTime.of(20, 0),
-                    onTimeSelected = { viewModel.onEndTimeChange(it) },
-                    modifier = Modifier.weight(1f),
-                    placeholder = "End time"
-                )
-            }
+                OutlinedButton(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Image, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Gallery")
+                }
 
-            Text(
-                text = "Location *",
-                style = MaterialTheme.typography.titleSmall
-            )
+                OutlinedButton(
+                    onClick = {
+                        when (PackageManager.PERMISSION_GRANTED) {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) -> {
+                                val photoFile = File.createTempFile(
+                                    "event_photo_",
+                                    ".jpg",
+                                    context.externalCacheDir  // CAMBIADO: context.cacheDir -> context.externalCacheDir
+                                )
+                                val uri = FileProvider.getUriForFile(
+                                    context,
+                                    "software.ulpgc.wherewhen.fileprovider",
+                                    photoFile
+                                )
+                                tempPhotoUri = UriWrapper(uri)
+                                cameraLauncher.launch(uri)
+                            }
+                            else -> {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Camera")
+                }
+            }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Checkbox(
-                    checked = viewModel.useCurrentLocation,
-                    onCheckedChange = { viewModel.onUseCurrentLocationChange(it) }
+                Text("Free Event")
+                Switch(
+                    checked = viewModel.isFreeEvent,
+                    onCheckedChange = { viewModel.onIsFreeEventChange(it) }
                 )
-                Text("Use current location")
             }
 
-            OutlinedTextField(
-                value = viewModel.locationAddress,
-                onValueChange = { viewModel.onLocationAddressChange(it) },
-                label = { Text("Address") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !viewModel.useCurrentLocation,
-                leadingIcon = {
-                    Icon(Icons.Default.LocationOn, contentDescription = null)
-                }
-            )
+            if (!viewModel.isFreeEvent) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = viewModel.priceAmount,
+                        onValueChange = { viewModel.onPriceAmountChange(it) },
+                        label = { Text("Price") },
+                        modifier = Modifier.weight(2f),
+                        placeholder = { Text("10.50") }
+                    )
 
-            OutlinedTextField(
-                value = viewModel.maxAttendees,
-                onValueChange = { viewModel.onMaxAttendeesChange(it) },
-                label = { Text("Max attendees (optional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(Icons.Default.Person, contentDescription = null)
-                }
-            )
+                    var expandedCurrency by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expandedCurrency,
+                        onExpandedChange = { expandedCurrency = !expandedCurrency },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = viewModel.priceCurrency,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Currency") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCurrency) },
+                            modifier = Modifier.menuAnchor()
+                        )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                        ExposedDropdownMenu(
+                            expanded = expandedCurrency,
+                            onDismissRequest = { expandedCurrency = false }
+                        ) {
+                            listOf("EUR", "USD", "GBP").forEach { currency ->
+                                DropdownMenuItem(
+                                    text = { Text(currency) },
+                                    onClick = {
+                                        viewModel.onPriceCurrencyChange(currency)
+                                        expandedCurrency = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             if (viewModel.uiState is JetpackComposeCreateEventViewModel.UiState.Error) {
                 Card(
@@ -182,161 +365,30 @@ fun CreateEventScreen(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Text(
-                            text = (viewModel.uiState as JetpackComposeCreateEventViewModel.UiState.Error).message,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
+                    Text(
+                        text = (viewModel.uiState as JetpackComposeCreateEventViewModel.UiState.Error).message,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
 
             Button(
                 onClick = { viewModel.createEvent(onEventCreated) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = viewModel.uiState != JetpackComposeCreateEventViewModel.UiState.Loading
+                enabled = viewModel.uiState !is JetpackComposeCreateEventViewModel.UiState.Loading && !viewModel.isUploadingImage
             ) {
-                if (viewModel.uiState == JetpackComposeCreateEventViewModel.UiState.Loading) {
+                if (viewModel.uiState is JetpackComposeCreateEventViewModel.UiState.Loading || viewModel.isUploadingImage) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
                     )
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (viewModel.isUploadingImage) "Uploading image..." else "Saving...")
                 } else {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Create Event")
+                    Text(if (eventIdToEdit != null) "Update Event" else "Create Event")
                 }
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CategoryDropdown(
-    selectedCategory: EventCategory,
-    onCategorySelected: (EventCategory) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = selectedCategory.name,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Category *") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            leadingIcon = {
-                Icon(Icons.Default.Star, contentDescription = null)
-            }
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            EventCategory.values().forEach { category ->
-                DropdownMenuItem(
-                    text = { Text(category.name) },
-                    onClick = {
-                        onCategorySelected(category)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DateField(
-    date: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = "Date"
-) {
-    val context = LocalContext.current
-    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-
-    OutlinedTextField(
-        value = date.format(dateFormatter),
-        onValueChange = {},
-        readOnly = true,
-        label = { Text(placeholder) },
-        modifier = modifier.clickable {
-            DatePickerDialog(
-                context,
-                { _, year, month, dayOfMonth ->
-                    onDateSelected(LocalDate.of(year, month + 1, dayOfMonth))
-                },
-                date.year,
-                date.monthValue - 1,
-                date.dayOfMonth
-            ).show()
-        },
-        trailingIcon = {
-            Icon(Icons.Default.DateRange, contentDescription = null)
-        },
-        enabled = false,
-        colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledBorderColor = MaterialTheme.colorScheme.outline,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    )
-}
-
-@Composable
-private fun TimeField(
-    time: LocalTime,
-    onTimeSelected: (LocalTime) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = "Time"
-) {
-    val context = LocalContext.current
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
-    OutlinedTextField(
-        value = time.format(timeFormatter),
-        onValueChange = {},
-        readOnly = true,
-        label = { Text(placeholder) },
-        modifier = modifier.clickable {
-            TimePickerDialog(
-                context,
-                { _, hourOfDay, minute ->
-                    onTimeSelected(LocalTime.of(hourOfDay, minute))
-                },
-                time.hour,
-                time.minute,
-                true
-            ).show()
-        },
-        trailingIcon = {
-            Icon(Icons.Default.DateRange, contentDescription = null)
-        },
-        enabled = false,
-        colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledBorderColor = MaterialTheme.colorScheme.outline,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    )
 }

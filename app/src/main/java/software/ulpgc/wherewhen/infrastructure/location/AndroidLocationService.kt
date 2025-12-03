@@ -21,7 +21,6 @@ class AndroidLocationService(private val context: Context) : LocationService {
 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
-
     private val geocoder: Geocoder = Geocoder(context, Locale.getDefault())
 
     @SuppressLint("MissingPermission")
@@ -33,7 +32,6 @@ class AndroidLocationService(private val context: Context) : LocationService {
             }
 
             Log.d("LocationService", "Obteniendo ubicación...")
-
             val location = try {
                 withTimeout(5000L) {
                     val cancellationToken = CancellationTokenSource()
@@ -49,7 +47,6 @@ class AndroidLocationService(private val context: Context) : LocationService {
 
             if (location != null) {
                 Log.d("LocationService", "Ubicación obtenida: ${location.latitude}, ${location.longitude}")
-
                 val addressInfo = try {
                     val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
                     addresses?.firstOrNull()?.let { address ->
@@ -80,6 +77,39 @@ class AndroidLocationService(private val context: Context) : LocationService {
             }
         } catch (e: Exception) {
             Log.e("LocationService", "Error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun geocodeAddress(address: String): Result<Location> {
+        return try {
+            if (address.isBlank()) {
+                return Result.failure(IllegalArgumentException("Address cannot be empty"))
+            }
+
+            Log.d("LocationService", "Geocoding address: $address")
+            val addresses = geocoder.getFromLocationName(address, 1)
+
+            if (!addresses.isNullOrEmpty()) {
+                val location = addresses.first()
+                Log.d("LocationService", "Address geocoded: ${location.latitude}, ${location.longitude}")
+
+                Result.success(
+                    Location(
+                        latitude = location.latitude,
+                        longitude = location.longitude,
+                        address = location.getAddressLine(0),
+                        placeName = location.featureName,
+                        city = location.locality,
+                        country = location.countryName
+                    )
+                )
+            } else {
+                Log.w("LocationService", "No se encontraron resultados para: $address")
+                Result.failure(Exception("Address not found"))
+            }
+        } catch (e: Exception) {
+            Log.e("LocationService", "Error geocoding address: ${e.message}", e)
             Result.failure(e)
         }
     }

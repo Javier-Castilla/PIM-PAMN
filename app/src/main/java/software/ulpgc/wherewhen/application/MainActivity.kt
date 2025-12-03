@@ -48,13 +48,13 @@ class MainActivity : ComponentActivity() {
     ) { permissions ->
         when {
             permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true -> {
-                println("Permiso de ubicación concedido")
+                println("Location permission granted")
             }
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true -> {
-                println("Permiso de ubicación aproximada concedido")
+                println("Coarse location permission granted")
             }
             else -> {
-                println("Permisos de ubicación denegados")
+                println("Location permissions denied")
             }
         }
     }
@@ -63,10 +63,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestLocationPermissions()
         enableEdgeToEdge()
-
         setContent {
             WindowInsets.safeDrawing
-
             WhereWhenTheme {
                 Surface(
                     modifier = Modifier
@@ -86,7 +84,7 @@ class MainActivity : ComponentActivity() {
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
-                println("Ya tiene permisos de ubicación")
+                println("Location permissions already granted")
             }
             else -> {
                 locationPermissionRequest.launch(
@@ -124,7 +122,6 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-
             authState == null && showRegister -> {
                 val registerViewModel: JetpackComposeRegisterViewModel = viewModel(
                     factory = RegisterViewModelFactory(appContainer.registerUserUseCase)
@@ -140,7 +137,6 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-
             else -> {
                 val socialViewModel: JetpackComposeSocialViewModel = viewModel(
                     key = "social_$userId",
@@ -197,15 +193,20 @@ class MainActivity : ComponentActivity() {
                         appContainer.getEventByIdUseCase,
                         appContainer.joinEventUseCase,
                         appContainer.leaveEventUseCase,
-                        appContainer.getEventAttendeesUseCase
+                        appContainer.getEventAttendeesUseCase,
+                        appContainer.deleteUserEventUseCase
                     )
                 )
 
                 val createEventViewModel: JetpackComposeCreateEventViewModel = viewModel(
                     key = "create_event_$userId",
                     factory = CreateEventViewModelFactory(
+                        application,
                         appContainer.createUserEventUseCase,
-                        appContainer.locationService
+                        appContainer.updateUserEventUseCase,
+                        appContainer.getEventByIdUseCase,
+                        appContainer.locationService,
+                        appContainer.imageUploadService
                     )
                 )
 

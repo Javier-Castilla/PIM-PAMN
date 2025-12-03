@@ -17,7 +17,9 @@ class CreateUserEventUseCase(
         endDateTime: LocalDateTime?,
         category: EventCategory,
         organizerId: UUID,
-        maxAttendees: Int?
+        maxAttendees: Int?,
+        imageUrl: String? = null,
+        price: Price? = null
     ): Result<Event> {
         return try {
             if (title.isBlank()) {
@@ -44,12 +46,12 @@ class CreateUserEventUseCase(
                 location = location,
                 dateTime = dateTime,
                 endDateTime = endDateTime,
-                imageUrl = null,
+                imageUrl = imageUrl,
                 source = EventSource.USER_CREATED,
                 organizerId = organizerId,
                 externalId = null,
                 externalUrl = null,
-                price = null,
+                price = price,
                 distance = null,
                 status = EventStatus.ACTIVE,
                 createdAt = LocalDateTime.now(),
@@ -57,7 +59,6 @@ class CreateUserEventUseCase(
             )
 
             val result = externalEventRepository.createUserEvent(event)
-
             result.onSuccess { createdEvent ->
                 externalEventRepository.joinEvent(createdEvent.id, organizerId)
             }

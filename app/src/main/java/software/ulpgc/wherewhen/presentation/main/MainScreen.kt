@@ -39,11 +39,15 @@ fun MainScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var selectedChatUser by remember { mutableStateOf<User?>(null) }
     var selectedEventId by remember { mutableStateOf<UUID?>(null) }
+    var editingEventId by remember { mutableStateOf<UUID?>(null) }
     var isCreatingEvent by remember { mutableStateOf(false) }
 
     BackHandler(enabled = true) {
         when {
-            isCreatingEvent -> isCreatingEvent = false
+            isCreatingEvent || editingEventId != null -> {
+                isCreatingEvent = false
+                editingEventId = null
+            }
             selectedEventId != null -> selectedEventId = null
             selectedChatUser != null -> selectedChatUser = null
             else -> onBackPressed()
@@ -56,12 +60,17 @@ fun MainScreen(
     }
 
     when {
-        isCreatingEvent -> {
+        isCreatingEvent || editingEventId != null -> {
             CreateEventScreen(
                 viewModel = createEventViewModel,
-                onNavigateBack = { isCreatingEvent = false },
+                eventIdToEdit = editingEventId,
+                onNavigateBack = {
+                    isCreatingEvent = false
+                    editingEventId = null
+                },
                 onEventCreated = {
                     isCreatingEvent = false
+                    editingEventId = null
                     eventsViewModel.onRefresh()
                 }
             )
@@ -71,7 +80,15 @@ fun MainScreen(
             EventDetailScreen(
                 viewModel = eventDetailViewModel,
                 eventId = selectedEventId!!,
-                onNavigateBack = { selectedEventId = null }
+                onNavigateBack = { selectedEventId = null },
+                onEditEvent = { eventId ->
+                    selectedEventId = null
+                    editingEventId = eventId
+                },
+                onEventDeleted = {
+                    selectedEventId = null
+                    eventsViewModel.onRefresh()
+                }
             )
         }
 

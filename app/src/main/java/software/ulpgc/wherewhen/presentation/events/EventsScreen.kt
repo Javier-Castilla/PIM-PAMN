@@ -41,11 +41,8 @@ fun EventsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateEventClick,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Create event")
+            FloatingActionButton(onClick = onCreateEventClick) {
+                Icon(Icons.Default.Add, contentDescription = "Create Event")
             }
         }
     ) { paddingValues ->
@@ -63,7 +60,12 @@ fun EventsScreen(
                 Tab(
                     selected = viewModel.selectedTab == 1,
                     onClick = { viewModel.onTabSelected(1) },
-                    text = { Text("My events") }
+                    text = { Text("Joined") }
+                )
+                Tab(
+                    selected = viewModel.selectedTab == 2,
+                    onClick = { viewModel.onTabSelected(2) },
+                    text = { Text("Created") }
                 )
             }
 
@@ -73,12 +75,10 @@ fun EventsScreen(
                     onQueryChange = { viewModel.onSearchQueryChange(it) },
                     onClearSearch = { viewModel.clearSearch() }
                 )
-
                 RadiusControl(
                     radiusKm = viewModel.radiusKm,
                     onRadiusChange = { viewModel.onRadiusChange(it) }
                 )
-
                 CategoryFilter(
                     selectedCategory = viewModel.selectedCategory,
                     onCategorySelected = { viewModel.onCategorySelected(it) }
@@ -94,7 +94,6 @@ fun EventsScreen(
                         CircularProgressIndicator()
                     }
                 }
-
                 is JetpackComposeEventsViewModel.UiState.Success -> {
                     if (state.events.isEmpty()) {
                         Box(
@@ -102,10 +101,12 @@ fun EventsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (viewModel.selectedTab == 0)
-                                    "There are no nearby events"
-                                else
-                                    "You have not got any joined events",
+                                text = when (viewModel.selectedTab) {
+                                    0 -> "There are no nearby events"
+                                    1 -> "You haven't joined any events"
+                                    2 -> "You haven't created any events"
+                                    else -> ""
+                                },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -117,7 +118,6 @@ fun EventsScreen(
                         )
                     }
                 }
-
                 is JetpackComposeEventsViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -138,7 +138,6 @@ fun EventsScreen(
                         }
                     }
                 }
-
                 is JetpackComposeEventsViewModel.UiState.Idle -> {}
             }
         }
@@ -274,7 +273,6 @@ private fun EventCard(
                     contentScale = ContentScale.Crop
                 )
             }
-
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -286,9 +284,7 @@ private fun EventCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -300,16 +296,15 @@ private fun EventCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = event.location.formatAddress().takeIf { it.isNotEmpty() } ?: "Location not available",
+                        text = event.location.formatAddress().takeIf { it.isNotEmpty() }
+                            ?: "Location not available",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)

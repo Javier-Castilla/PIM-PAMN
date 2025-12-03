@@ -32,7 +32,7 @@ class JetpackComposeEventsViewModel(
         data class Error(val message: String) : UiState()
     }
 
-    var uiState by mutableStateOf<UiState>(UiState.Loading)
+    var uiState by mutableStateOf<UiState>(UiState.Idle)
         private set
 
     var selectedTab by mutableStateOf(0)
@@ -50,38 +50,16 @@ class JetpackComposeEventsViewModel(
     var radiusKm by mutableStateOf(25)
         private set
 
-    var isLocationLoading by mutableStateOf(true)
-        private set
-
     init {
-        loadLocationAndEvents()
-    }
-
-    private fun loadLocationAndEvents() {
-        viewModelScope.launch {
-            isLocationLoading = true
-            uiState = UiState.Loading
-
-            locationService.getCurrentLocation().fold(
-                onSuccess = { location ->
-                    currentLocation = location
-                    isLocationLoading = false
-                    loadNearbyEvents()
-                },
-                onFailure = {
-                    currentLocation = Location(28.1235, -15.4363, "Las Palmas de Gran Canaria, Spain", null, null, null)
-                    isLocationLoading = false
-                    loadNearbyEvents()
-                }
-            )
-        }
+        loadLocation()
     }
 
     override fun onTabSelected(index: Int) {
         selectedTab = index
         when (index) {
             0 -> loadNearbyEvents()
-            1 -> loadMyEvents()
+            1 -> loadJoinedEvents()
+            2 -> loadCreatedEvents()
         }
     }
 
@@ -117,21 +95,53 @@ class JetpackComposeEventsViewModel(
     }
 
     override fun onRefresh() {
-        loadLocationAndEvents()
+        when (selectedTab) {
+            0 -> {
+                loadLocation()
+            }
+            1 -> loadJoinedEvents()
+            2 -> loadCreatedEvents()
+        }
     }
 
     override fun loadNearbyEvents() {
         val location = currentLocation
+        println("CURRENT LOCATION: ${location?.latitude}, ${location?.longitude} - ${location?.address}")
         if (location == null) {
-            if (!isLocationLoading) {
-                uiState = UiState.Error("Location could not be obtained")
-            }
+            uiState = UiState.Error("Location could not be obtained")
             return
         }
 
         viewModelScope.launch {
             uiState = UiState.Loading
             searchNearbyEventsUseCase(location, radiusKm).fold(
+                onSuccess = { events ->
+                    println("✅ EVENTS FOUND: ${events.size}")
+                    events.forEach { println("   - ${it.title} (${it.source})") }
+                    uiState = UiState.Success(events)
+                },
+                onFailure = { exception ->
+                    println("❌ ERROR: ${exception.message}")
+                    exception.printStackTrace()
+                    uiState = UiState.Error(handleException(exception))
+                }
+            )
+        }
+    }
+
+    override fun loadMyEvents() {
+        loadJoinedEvents()
+    }
+
+    private fun loadJoinedEvents() {
+        viewModelScope.launch {
+            val userId = getCurrentUserId() ?: run {
+                uiState = UiState.Error("User not authenticated")
+                return@launch
+            }
+
+            uiState = UiState.Loading
+            getUserJoinedEventsUseCase(userId).fold(
                 onSuccess = { events ->
                     uiState = UiState.Success(events)
                 },
@@ -142,7 +152,7 @@ class JetpackComposeEventsViewModel(
         }
     }
 
-    override fun loadMyEvents() {
+    private fun loadCreatedEvents() {
         viewModelScope.launch {
             val userId = getCurrentUserId() ?: run {
                 uiState = UiState.Error("User not authenticated")
@@ -150,7 +160,7 @@ class JetpackComposeEventsViewModel(
             }
 
             uiState = UiState.Loading
-            getUserJoinedEventsUseCase(userId).fold(
+            getUserCreatedEventsUseCase(userId).fold(
                 onSuccess = { events ->
                     uiState = UiState.Success(events)
                 },
@@ -197,6 +207,25 @@ class JetpackComposeEventsViewModel(
         }
     }
 
+    private fun loadLocation() {
+        viewModelScope.launch {
+            locationService.getCurrentLocation().fold(
+                onSuccess = { location ->
+                    currentLocation = location
+                    if (selectedTab == 0) {
+                        loadNearbyEvents()
+                    }
+                },
+                onFailure = {
+                    currentLocation = Location(28.1235, -15.4363, "Las Palmas de Gran Canaria, Spain", null, null, null)
+                    if (selectedTab == 0) {
+                        loadNearbyEvents()
+                    }
+                }
+            )
+        }
+    }
+
     private fun getCurrentUserId(): UUID? {
         val firebaseUser = FirebaseAuth.getInstance().currentUser ?: return null
         return UUID.parse(firebaseUser.uid).getOrNull()
@@ -207,7 +236,7 @@ class JetpackComposeEventsViewModel(
             is LocationPermissionDeniedException -> "Location permissions denied"
             is LocationUnavailableException -> "Location could not be obtained"
             is EventNotFoundException -> "Event not found"
-            else -> "Error loading events"
+            else -> "Error loading events: ${exception.message}"
         }
     }
 }

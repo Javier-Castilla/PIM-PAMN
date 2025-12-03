@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id("kotlin-parcelize")
 }
 
 val localProperties = Properties()
@@ -28,11 +29,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val ticketmasterKey = localProperties.getProperty("TICKETMASTER_API_KEY") ?: ""
+        val imgbbKey = localProperties.getProperty("IMGBB_API_KEY") ?: ""
+
         println("========================================")
-        println("DEBUG: API Key loaded = '${ticketmasterKey.take(10)}...'")
-        println("DEBUG: API Key length = ${ticketmasterKey.length}")
+        println("DEBUG: Ticketmaster API Key loaded = '${ticketmasterKey.take(10)}...'")
+        println("DEBUG: Ticketmaster API Key length = ${ticketmasterKey.length}")
+        println("DEBUG: ImgBB API Key loaded = '${imgbbKey.take(10)}...'")
+        println("DEBUG: ImgBB API Key length = ${imgbbKey.length}")
         println("========================================")
+
         buildConfigField("String", "TICKETMASTER_API_KEY", "\"$ticketmasterKey\"")
+        buildConfigField("String", "IMGBB_API_KEY", "\"$imgbbKey\"")
     }
 
     buildTypes {
@@ -84,14 +91,15 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     testImplementation(libs.junit)
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
-
-    implementation("io.coil-kt:coil-compose:2.5.0")
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

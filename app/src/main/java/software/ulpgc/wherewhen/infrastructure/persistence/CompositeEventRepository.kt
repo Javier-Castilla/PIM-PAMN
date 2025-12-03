@@ -19,25 +19,43 @@ class CompositeEventRepository(
         radiusKm: Int
     ): Result<List<Event>> {
         return try {
+            println("🔍 CompositeEventRepository: Iniciando búsqueda nearby")
+            println("🔍 Location: ${location.latitude}, ${location.longitude}, radius: $radiusKm km")
+
             val externalEvents = externalEventApiService.searchNearbyEvents(
                 location.latitude,
                 location.longitude,
                 radiusKm
-            ).getOrElse { emptyList() }
+            ).getOrElse { error ->
+                println("❌ Error en externalEventApiService: ${error.message}")
+                emptyList()
+            }
+            println("🎫 Ticketmaster devolvió: ${externalEvents.size} eventos")
+            externalEvents.forEach { println("   - ${it.title} (source: ${it.source})") }
 
             val userEvents = userEventRepository.getUserEventsByLocation(
                 UUID.random(),
                 location.latitude,
                 location.longitude,
                 radiusKm.toDouble()
-            ).getOrElse { emptyList() }
+            ).getOrElse { error ->
+                println("❌ Error en userEventRepository: ${error.message}")
+                emptyList()
+            }
+            println("👤 Firebase devolvió: ${userEvents.size} eventos")
+            userEvents.forEach { println("   - ${it.title} (source: ${it.source})") }
 
             val combined = (externalEvents + userEvents)
                 .distinctBy { it.id }
                 .sortedBy { it.dateTime }
 
+            println("✅ Total combinado después de distinctBy: ${combined.size} eventos")
+            combined.forEach { println("   - ${it.title} (source: ${it.source})") }
+
             Result.success(combined)
         } catch (e: Exception) {
+            println("💥 Exception en CompositeEventRepository: ${e.message}")
+            e.printStackTrace()
             Result.failure(e)
         }
     }

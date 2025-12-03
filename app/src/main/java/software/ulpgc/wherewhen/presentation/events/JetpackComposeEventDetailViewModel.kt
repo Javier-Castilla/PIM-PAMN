@@ -18,12 +18,18 @@ class JetpackComposeEventDetailViewModel(
     private val getEventByIdUseCase: GetEventByIdUseCase,
     private val joinEventUseCase: JoinEventUseCase,
     private val leaveEventUseCase: LeaveEventUseCase,
-    private val getEventAttendeesUseCase: GetEventAttendeesUseCase
+    private val getEventAttendeesUseCase: GetEventAttendeesUseCase,
+    private val deleteUserEventUseCase: DeleteUserEventUseCase
 ) : ViewModel(), EventDetailViewModel {
 
     sealed class UiState {
         object Loading : UiState()
-        data class Success(val event: Event, val isAttending: Boolean, val attendeesCount: Int) : UiState()
+        data class Success(
+            val event: Event,
+            val isAttending: Boolean,
+            val attendeesCount: Int,
+            val isOrganizer: Boolean
+        ) : UiState()
         data class Error(val message: String) : UiState()
     }
 
@@ -31,6 +37,9 @@ class JetpackComposeEventDetailViewModel(
         private set
 
     var isJoining by mutableStateOf(false)
+        private set
+
+    var showDeleteDialog by mutableStateOf(false)
         private set
 
     private var currentEventId: UUID? = null
@@ -58,6 +67,7 @@ class JetpackComposeEventDetailViewModel(
     override fun onJoinEvent() {
         val eventId = currentEventId ?: return
         val userId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
             isJoining = true
             Log.d("EventDetailViewModel", "Joining event: $eventId")
@@ -78,6 +88,7 @@ class JetpackComposeEventDetailViewModel(
     override fun onLeaveEvent() {
         val eventId = currentEventId ?: return
         val userId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
             isJoining = true
             Log.d("EventDetailViewModel", "Leaving event: $eventId")
@@ -95,10 +106,37 @@ class JetpackComposeEventDetailViewModel(
         }
     }
 
+    fun onDeleteEvent(onDeleted: () -> Unit) {
+        val eventId = currentEventId ?: return
+
+        viewModelScope.launch {
+            Log.d("EventDetailViewModel", "Deleting event: $eventId")
+            deleteUserEventUseCase(eventId).fold(
+                onSuccess = {
+                    Log.d("EventDetailViewModel", "Event deleted")
+                    onDeleted()
+                },
+                onFailure = { exception ->
+                    Log.e("EventDetailViewModel", "Error deleting", exception)
+                    uiState = UiState.Error(handleException(exception))
+                }
+            )
+        }
+    }
+
+    fun showDeleteConfirmation() {
+        showDeleteDialog = true
+    }
+
+    fun dismissDeleteDialog() {
+        showDeleteDialog = false
+    }
+
     override fun loadAttendees() {
         val eventId = currentEventId ?: return
         val event = currentEvent ?: return
         val userId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
             Log.d("EventDetailViewModel", "Loading attendees for: $eventId")
             val attendeesResult = getEventAttendeesUseCase(eventId)
@@ -106,11 +144,13 @@ class JetpackComposeEventDetailViewModel(
             if (attendeesResult.isSuccess) {
                 val attendees = attendeesResult.getOrNull()!!
                 val isAttending = attendees.contains(userId)
-                Log.d("EventDetailViewModel", "Attendees: ${attendees.size}, isAttending: $isAttending")
-                uiState = UiState.Success(event, isAttending, attendees.size)
+                val isOrganizer = event.organizerId == userId
+                Log.d("EventDetailViewModel", "Attendees: ${attendees.size}, isAttending: $isAttending, isOrganizer: $isOrganizer")
+                uiState = UiState.Success(event, isAttending, attendees.size, isOrganizer)
             } else {
                 Log.e("EventDetailViewModel", "Error loading attendees", attendeesResult.exceptionOrNull())
-                uiState = UiState.Success(event, false, 0)
+                val isOrganizer = event.organizerId == userId
+                uiState = UiState.Success(event, false, 0, isOrganizer)
             }
         }
     }
@@ -126,7 +166,7 @@ class JetpackComposeEventDetailViewModel(
             is EventFullException -> "Event is full"
             is AlreadyAttendingEventException -> "You are already attending this event"
             is NotAttendingEventException -> "You are not attending this event"
-            is UnauthorizedEventAccessException -> "You have no permission you access"
+            is UnauthorizedEventAccessException -> "You have no permission to access"
             else -> "Error processing request: ${exception.message}"
         }
     }

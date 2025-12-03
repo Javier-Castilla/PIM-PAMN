@@ -10,7 +10,9 @@ import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.ExternalEventRepository
+import software.ulpgc.wherewhen.domain.ports.persistence.UserEventRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
+import software.ulpgc.wherewhen.domain.ports.storage.ImageUploadService
 import software.ulpgc.wherewhen.domain.services.TokenService
 import software.ulpgc.wherewhen.domain.usecases.user.*
 import software.ulpgc.wherewhen.domain.usecases.friendship.*
@@ -28,6 +30,7 @@ import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseChatRepositor
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseEventRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseMessageRepository
 import software.ulpgc.wherewhen.infrastructure.services.MockTokenService
+import software.ulpgc.wherewhen.infrastructure.storage.ImgBBImageUploadService
 
 class WhereWhenApplication : Application() {
     lateinit var container: AppContainer
@@ -69,7 +72,10 @@ interface AppContainer {
     val getUserJoinedEventsUseCase: GetUserJoinedEventsUseCase
     val getUserCreatedEventsUseCase: GetUserCreatedEventsUseCase
     val createUserEventUseCase: CreateUserEventUseCase
+    val deleteUserEventUseCase: DeleteUserEventUseCase
+    val updateUserEventUseCase: UpdateUserEventUseCase
     val locationService: LocationService
+    val imageUploadService: ImageUploadService
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -101,6 +107,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         FirebaseMessageRepository()
     }
 
+    private val userEventRepository: UserEventRepository by lazy {
+        FirebaseEventRepository()
+    }
+
     private val externalEventRepository: ExternalEventRepository by lazy {
         CachedEventRepository(
             CompositeEventRepository(
@@ -112,6 +122,13 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val locationService: LocationService by lazy {
         AndroidLocationService(context)
+    }
+
+    override val imageUploadService: ImageUploadService by lazy {
+        ImgBBImageUploadService(
+            context = context,
+            apiKey = BuildConfig.IMGBB_API_KEY
+        )
     }
 
     override val authenticateUserUseCase: AuthenticateUserUseCase by lazy {
@@ -224,5 +241,13 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val createUserEventUseCase: CreateUserEventUseCase by lazy {
         CreateUserEventUseCase(externalEventRepository)
+    }
+
+    override val deleteUserEventUseCase: DeleteUserEventUseCase by lazy {
+        DeleteUserEventUseCase(externalEventRepository)
+    }
+
+    override val updateUserEventUseCase: UpdateUserEventUseCase by lazy {
+        UpdateUserEventUseCase(userEventRepository)
     }
 }
