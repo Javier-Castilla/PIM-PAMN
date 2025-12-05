@@ -1,17 +1,16 @@
 package software.ulpgc.wherewhen.domain.usecases.chat
 
+import software.ulpgc.wherewhen.domain.exceptions.chat.ChatNotFoundException
+import software.ulpgc.wherewhen.domain.exceptions.chat.EmptyMessageException
 import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import software.ulpgc.wherewhen.domain.exceptions.chat.EmptyMessageException
-import software.ulpgc.wherewhen.domain.exceptions.chat.ChatNotFoundException
-import software.ulpgc.wherewhen.domain.exceptions.chat.UnauthorizedChatAccessException
 import java.time.LocalDateTime
 
 class SendMessageUseCase(
-    private val messageRepository: MessageRepository,
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val messageRepository: MessageRepository
 ) {
     suspend operator fun invoke(
         chatId: UUID,
@@ -23,13 +22,11 @@ class SendMessageUseCase(
                 throw EmptyMessageException()
             }
 
-            val chat = chatRepository.getChat(chatId).getOrElse {
-                throw ChatNotFoundException(chatId)
-            }
+            val chat = chatRepository.getChat(chatId)
+                .getOrElse { throw ChatNotFoundException(chatId) }
 
-            if (!chat.isParticipant(senderId)) {
-                throw UnauthorizedChatAccessException(senderId, chatId)
-            }
+            val receiverId = chat.getOtherParticipant(senderId)
+                ?: throw ChatNotFoundException(chatId)
 
             val message = Message(
                 id = UUID.random(),
@@ -40,13 +37,13 @@ class SendMessageUseCase(
                 isRead = false
             )
 
-            messageRepository.sendMessage(message).onSuccess {
-                chatRepository.updateLastMessage(chatId, content, message.timestamp)
-                val receiverId = chat.getOtherParticipant(senderId)
-                if (receiverId != null) {
+            messageRepository.sendMessage(message)
+                .onSuccess {
+                    chatRepository.updateLastMessage(chatId, content, message.timestamp)
                     chatRepository.incrementUnreadCount(chatId, receiverId)
                 }
-            }
+
+            Result.success(message)
         } catch (e: Exception) {
             Result.failure(e)
         }

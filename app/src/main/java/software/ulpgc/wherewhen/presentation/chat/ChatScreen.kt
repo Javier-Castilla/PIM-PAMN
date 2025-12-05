@@ -1,19 +1,25 @@
 package software.ulpgc.wherewhen.presentation.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.model.user.User
@@ -38,10 +44,8 @@ fun ChatScreen(
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.scrollToItem(uiState.messages.size - 1)
-
             val chatId = viewModel.getChatId()
             val userId = currentUserId?.let { UUID.parse(it).getOrNull() }
-
             if (chatId != null && userId != null) {
                 val hasUnreadFromOther = uiState.messages.any {
                     !it.isRead && it.senderId != userId
@@ -55,25 +59,49 @@ fun ChatScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
-                title = { Text(uiState.otherUser?.name ?: "") },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (otherUser.profileImageUrl != null) {
+                            AsyncImage(
+                                model = otherUser.profileImageUrl,
+                                contentDescription = "Profile picture",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(uiState.otherUser?.name ?: "")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
-        },
-        bottomBar = {
-            MessageInputBar(
-                messageText = uiState.messageText,
-                onMessageTextChange = { viewModel.onMessageTextChange(it) },
-                onSendClick = { viewModel.sendMessage() }
-            )
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -96,17 +124,25 @@ fun ChatScreen(
                 }
                 uiState.messages.isEmpty() -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("No messages yet. Start the conversation!")
                     }
+                    MessageInputBar(
+                        messageText = uiState.messageText,
+                        onMessageTextChange = { viewModel.onMessageTextChange(it) },
+                        onSendClick = { viewModel.sendMessage() }
+                    )
                 }
                 else -> {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
-                            .fillMaxSize()
+                            .weight(1f)
+                            .fillMaxWidth()
                             .padding(horizontal = 8.dp),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
@@ -117,6 +153,11 @@ fun ChatScreen(
                             )
                         }
                     }
+                    MessageInputBar(
+                        messageText = uiState.messageText,
+                        onMessageTextChange = { viewModel.onMessageTextChange(it) },
+                        onSendClick = { viewModel.sendMessage() }
+                    )
                 }
             }
         }
@@ -177,6 +218,7 @@ fun MessageBubble(
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
+
                     if (isOwnMessage) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -200,37 +242,32 @@ fun MessageInputBar(
     onMessageTextChange: (String) -> Unit,
     onSendClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 8.dp
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Bottom
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        OutlinedTextField(
+            value = messageText,
+            onValueChange = onMessageTextChange,
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("Type a message...") },
+            shape = RoundedCornerShape(24.dp),
+            maxLines = 4
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        FilledIconButton(
+            onClick = onSendClick,
+            enabled = messageText.isNotBlank(),
+            modifier = Modifier.size(48.dp),
+            shape = CircleShape
         ) {
-            OutlinedTextField(
-                value = messageText,
-                onValueChange = onMessageTextChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message...") },
-                maxLines = 4
+            Icon(
+                Icons.AutoMirrored.Filled.Send,
+                contentDescription = "Send"
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(
-                onClick = onSendClick,
-                enabled = messageText.isNotBlank()
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = if (messageText.isNotBlank())
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                )
-            }
         }
     }
 }

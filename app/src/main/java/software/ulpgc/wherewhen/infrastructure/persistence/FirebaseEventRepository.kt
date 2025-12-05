@@ -7,18 +7,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.model.events.*
+import software.ulpgc.wherewhen.domain.ports.persistence.UserEventRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.infrastructure.persistence.mappers.FirebaseEventMapper
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class FirebaseEventRepository {
-
+class FirebaseEventRepository : UserEventRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val eventsCollection = firestore.collection("events")
     private val attendanceCollection = firestore.collection("event_attendance")
 
-    suspend fun getEventById(eventId: UUID): Result<Event> {
+    override suspend fun getEventById(eventId: UUID): Result<Event> {
         return try {
             val snapshot = eventsCollection.document(eventId.value).get().await()
             if (snapshot.exists()) {
@@ -33,7 +33,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun createUserEvent(event: Event): Result<Event> {
+    override suspend fun createUserEvent(event: Event): Result<Event> {
         return try {
             val eventMap = FirebaseEventMapper.toFirestore(event)
             eventsCollection.document(event.id.value).set(eventMap).await()
@@ -43,7 +43,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun updateUserEvent(event: Event): Result<Event> {
+    override suspend fun updateUserEvent(event: Event): Result<Event> {
         return try {
             val eventMap = FirebaseEventMapper.toFirestore(event)
             eventsCollection.document(event.id.value).set(eventMap).await()
@@ -53,7 +53,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun deleteUserEvent(eventId: UUID): Result<Unit> {
+    override suspend fun deleteUserEvent(eventId: UUID): Result<Unit> {
         return try {
             eventsCollection.document(eventId.value).delete().await()
             attendanceCollection.whereEqualTo("eventId", eventId.value).get().await()
@@ -64,7 +64,7 @@ class FirebaseEventRepository {
         }
     }
 
-    fun observeUserEvents(organizerId: UUID): Flow<List<Event>> = callbackFlow {
+    override fun observeUserEvents(organizerId: UUID): Flow<List<Event>> = callbackFlow {
         val listener = eventsCollection
             .whereEqualTo("organizerId", organizerId.value)
             .whereEqualTo("source", EventSource.USER_CREATED.name)
@@ -84,7 +84,7 @@ class FirebaseEventRepository {
         awaitClose { listener.remove() }
     }
 
-    suspend fun getUserEventsByLocation(
+    override suspend fun getUserEventsByLocation(
         organizerId: UUID,
         latitude: Double,
         longitude: Double,
@@ -92,7 +92,6 @@ class FirebaseEventRepository {
     ): Result<List<Event>> {
         return try {
             val events = eventsCollection
-                .whereEqualTo("organizerId", organizerId.value)
                 .whereEqualTo("source", EventSource.USER_CREATED.name)
                 .get()
                 .await()
@@ -112,7 +111,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun joinEvent(eventId: UUID, userId: UUID): Result<Unit> {
+    override suspend fun joinEvent(eventId: UUID, userId: UUID): Result<Unit> {
         return try {
             val attendanceId = "${eventId.value}_${userId.value}"
             val attendanceMap = mapOf(
@@ -122,6 +121,7 @@ class FirebaseEventRepository {
                 "status" to AttendanceStatus.GOING.name,
                 "joinedAt" to LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
             )
+
             attendanceCollection.document(attendanceId).set(attendanceMap).await()
 
             val eventDoc = eventsCollection.document(eventId.value).get().await()
@@ -136,7 +136,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun leaveEvent(eventId: UUID, userId: UUID): Result<Unit> {
+    override suspend fun leaveEvent(eventId: UUID, userId: UUID): Result<Unit> {
         return try {
             val attendanceId = "${eventId.value}_${userId.value}"
             attendanceCollection.document(attendanceId).delete().await()
@@ -155,7 +155,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun getEventAttendees(eventId: UUID): Result<List<UUID>> {
+    override suspend fun getEventAttendees(eventId: UUID): Result<List<UUID>> {
         return try {
             val attendees = attendanceCollection
                 .whereEqualTo("eventId", eventId.value)
@@ -173,7 +173,7 @@ class FirebaseEventRepository {
         }
     }
 
-    suspend fun getUserJoinedEvents(userId: UUID): Result<List<Event>> {
+    override suspend fun getUserJoinedEvents(userId: UUID): Result<List<Event>> {
         return try {
             val eventIds = attendanceCollection
                 .whereEqualTo("userId", userId.value)
@@ -194,6 +194,22 @@ class FirebaseEventRepository {
         }
     }
 
+    override suspend fun getUserCreatedEvents(userId: UUID): Result<List<Event>> {
+        return try {
+            val events = eventsCollection
+                .whereEqualTo("organizerId", userId.value)
+                .whereEqualTo("source", EventSource.USER_CREATED.name)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { FirebaseEventMapper.fromFirestore(it) }
+
+            Result.success(events)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371.0
         val lat1Rad = Math.toRadians(lat1)
@@ -204,8 +220,8 @@ class FirebaseEventRepository {
         val a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
                 Math.cos(lat1Rad) * Math.cos(lat2Rad) *
                 Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
-
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
         return R * c
     }
 }

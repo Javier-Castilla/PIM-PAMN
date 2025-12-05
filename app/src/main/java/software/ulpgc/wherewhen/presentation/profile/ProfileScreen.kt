@@ -1,6 +1,10 @@
 package software.ulpgc.wherewhen.presentation.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -10,8 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -23,6 +29,12 @@ fun ProfileScreen(
 ) {
     val uiState = viewModel.uiState
     var isEditing by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onImageSelected(it) }
+    }
 
     Scaffold(
         topBar = {
@@ -81,20 +93,81 @@ fun ProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            modifier = Modifier.size(120.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            if (uiState.selectedImageUri != null) {
+                                AsyncImage(
+                                    model = uiState.selectedImageUri,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .clickable(enabled = isEditing) {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else if (uiState.profile.profileImageUrl != null) {
+                                AsyncImage(
+                                    model = uiState.profile.profileImageUrl,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .clickable(enabled = isEditing) {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer)
+                                        .clickable(enabled = isEditing) {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(60.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+
+                            if (isEditing) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                        .clickable { imagePickerLauncher.launch("image/*") },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.CameraAlt,
+                                        contentDescription = "Change photo",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            if (uiState.isUploadingImage) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
                         }
+
                         Spacer(modifier = Modifier.height(24.dp))
+
                         if (isEditing) {
                             OutlinedTextField(
                                 value = uiState.editName,
@@ -150,6 +223,7 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+
                             if (uiState.profile.description.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Card(
@@ -165,6 +239,7 @@ fun ProfileScreen(
                                     )
                                 }
                             }
+
                             Spacer(modifier = Modifier.height(32.dp))
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -203,6 +278,7 @@ fun ProfileScreen(
                                     }
                                 }
                             }
+
                             Spacer(modifier = Modifier.height(24.dp))
                             Button(
                                 onClick = {

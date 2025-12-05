@@ -1,15 +1,22 @@
 package software.ulpgc.wherewhen.presentation.social
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.usecases.friendship.FriendshipStatus
 
@@ -17,7 +24,8 @@ import software.ulpgc.wherewhen.domain.usecases.friendship.FriendshipStatus
 @Composable
 fun SocialScreen(
     viewModel: JetpackComposeSocialViewModel,
-    onMessageClick: (User) -> Unit = {}
+    onMessageClick: (User) -> Unit = {},
+    onUserClick: (String) -> Unit = {}
 ) {
     val uiState = viewModel.uiState
     var selectedTab by remember { mutableStateOf(0) }
@@ -54,8 +62,8 @@ fun SocialScreen(
                     icon = {
                         BadgedBox(
                             badge = {
-                                if (uiState.pendingRequests.isNotEmpty()) {
-                                    Badge { Text("${uiState.pendingRequests.size}") }
+                                if (uiState.receivedRequests.isNotEmpty()) {
+                                    Badge { Text("${uiState.receivedRequests.size}") }
                                 }
                             }
                         ) {
@@ -72,27 +80,32 @@ fun SocialScreen(
             }
 
             when (selectedTab) {
-                0 -> SearchTab(viewModel, uiState)
-                1 -> RequestsTab(viewModel, uiState)
-                2 -> FriendsTab(viewModel, uiState, onMessageClick)
+                0 -> SearchTab(viewModel, uiState, onUserClick)
+                1 -> RequestsTab(viewModel, uiState, onUserClick)
+                2 -> FriendsTab(viewModel, uiState, onMessageClick, onUserClick)
             }
         }
     }
 }
 
 @Composable
-fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) {
-    Column(modifier = Modifier.padding(16.dp)) {
+fun SearchTab(
+    viewModel: JetpackComposeSocialViewModel,
+    uiState: SocialUiState,
+    onUserClick: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = uiState.searchQuery,
             onValueChange = { viewModel.onSearchQueryChange(it) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             label = { Text("Search users") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            shape = RoundedCornerShape(24.dp),
             singleLine = true
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         when {
             uiState.isLoading -> {
@@ -103,18 +116,25 @@ fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) 
             uiState.errorMessage != null -> {
                 Text(
                     text = uiState.errorMessage,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
             uiState.users.isEmpty() && uiState.searchQuery.isNotEmpty() -> {
-                Text("No users found")
+                Text(
+                    "No users found",
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
             else -> {
-                LazyColumn {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                ) {
                     items(uiState.users) { userWithStatus ->
                         UserCard(
                             userWithStatus = userWithStatus,
-                            onAddClick = { viewModel.sendFriendRequest(userWithStatus.user.uuid) }
+                            onAddClick = { viewModel.sendFriendRequest(userWithStatus.user.uuid) },
+                            onUserClick = onUserClick
                         )
                     }
                 }
@@ -124,60 +144,172 @@ fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) 
 }
 
 @Composable
-fun RequestsTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) {
-    if (uiState.pendingRequests.isEmpty()) {
+fun RequestsTab(
+    viewModel: JetpackComposeSocialViewModel,
+    uiState: SocialUiState,
+    onUserClick: (String) -> Unit
+) {
+    if (uiState.receivedRequests.isEmpty() && uiState.sentRequests.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No pending requests")
         }
     } else {
-        LazyColumn(modifier = Modifier.padding(16.dp)) {
-            items(uiState.pendingRequests) { requestWithUser ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                ) {
-                    Row(
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            if (uiState.receivedRequests.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Received",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                items(uiState.receivedRequests) { requestWithUser ->
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 4.dp)
+                            .clickable { onUserClick(requestWithUser.user.uuid.value) }
                     ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (requestWithUser.user.profileImageUrl != null) {
+                                AsyncImage(
+                                    model = requestWithUser.user.profileImageUrl,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = requestWithUser.user.name,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "Wants to be your friend",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.acceptFriendRequest(requestWithUser.request.id) }
+                            ) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Accept",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.rejectFriendRequest(requestWithUser.request.id) }
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Reject",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (uiState.sentRequests.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Sent",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(
+                            top = if (uiState.receivedRequests.isNotEmpty()) 16.dp else 8.dp,
+                            bottom = 8.dp
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = requestWithUser.user.name,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "Wants to be your friend",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        IconButton(
-                            onClick = { viewModel.acceptFriendRequest(requestWithUser.request.id) }
+                    )
+                }
+                items(uiState.sentRequests) { requestWithUser ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onUserClick(requestWithUser.user.uuid.value) }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = "Accept",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        IconButton(
-                            onClick = { viewModel.rejectFriendRequest(requestWithUser.request.id) }
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Reject",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                            if (requestWithUser.user.profileImageUrl != null) {
+                                AsyncImage(
+                                    model = requestWithUser.user.profileImageUrl,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = requestWithUser.user.name,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "Waiting for response",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.cancelFriendRequest(requestWithUser.request.id) }
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Cancel",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }
@@ -190,7 +322,8 @@ fun RequestsTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState
 fun FriendsTab(
     viewModel: JetpackComposeSocialViewModel,
     uiState: SocialUiState,
-    onMessageClick: (User) -> Unit
+    onMessageClick: (User) -> Unit,
+    onUserClick: (String) -> Unit
 ) {
     if (uiState.friendToRemove != null) {
         AlertDialog(
@@ -215,12 +348,15 @@ fun FriendsTab(
             Text("No friends yet")
         }
     } else {
-        LazyColumn(modifier = Modifier.padding(16.dp)) {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        ) {
             items(uiState.friends) { friend ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
+                        .clickable { onUserClick(friend.uuid.value) }
                 ) {
                     Row(
                         modifier = Modifier
@@ -228,12 +364,31 @@ fun FriendsTab(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        if (friend.profileImageUrl != null) {
+                            AsyncImage(
+                                model = friend.profileImageUrl,
+                                contentDescription = "Profile picture",
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = friend.name,
@@ -262,11 +417,16 @@ fun FriendsTab(
 }
 
 @Composable
-fun UserCard(userWithStatus: UserWithStatus, onAddClick: () -> Unit) {
+fun UserCard(
+    userWithStatus: UserWithStatus,
+    onAddClick: () -> Unit,
+    onUserClick: (String) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .clickable { onUserClick(userWithStatus.user.uuid.value) }
     ) {
         Row(
             modifier = Modifier
@@ -274,19 +434,37 @@ fun UserCard(userWithStatus: UserWithStatus, onAddClick: () -> Unit) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            if (userWithStatus.user.profileImageUrl != null) {
+                AsyncImage(
+                    model = userWithStatus.user.profileImageUrl,
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = userWithStatus.user.name,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f)
             )
-
             when (userWithStatus.status) {
                 FriendshipStatus.NOT_FRIENDS -> {
                     IconButton(onClick = onAddClick) {

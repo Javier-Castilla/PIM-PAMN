@@ -7,5 +7,6 @@ data class User(
     val uuid: UUID,
     val name: String,
     val description: String = "",
+    val profileImageUrl: String? = null,
     val createdAt: LocalDateTime = LocalDateTime.now()
 )

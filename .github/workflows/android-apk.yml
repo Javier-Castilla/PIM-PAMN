@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -30,11 +31,26 @@ jobs:
           mkdir -p app
           echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
 
+      - name: Create local.properties with API keys
+        env:
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
+        run: |
+          echo "TICKETMASTER_API_KEY=$TICKETMASTER_API_KEY" > local.properties
+          echo "IMGBB_API_KEY=$IMGBB_API_KEY" >> local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> local.properties
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wherewhen-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
 
       - name: Create GitHub Release with APK
         uses: softprops/action-gh-release@v2

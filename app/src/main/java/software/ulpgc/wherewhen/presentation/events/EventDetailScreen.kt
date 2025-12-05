@@ -1,0 +1,378 @@
+package software.ulpgc.wherewhen.presentation.events
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import software.ulpgc.wherewhen.domain.model.events.Event
+import software.ulpgc.wherewhen.domain.model.events.EventSource
+import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import java.time.format.DateTimeFormatter
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EventDetailScreen(
+    viewModel: JetpackComposeEventDetailViewModel,
+    eventId: UUID,
+    onNavigateBack: () -> Unit,
+    onEditEvent: (UUID) -> Unit = {},
+    onEventDeleted: () -> Unit = {}
+) {
+    LaunchedEffect(eventId) {
+        viewModel.loadEvent(eventId)
+    }
+
+    if (viewModel.showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteDialog() },
+            title = { Text("Delete event") },
+            text = { Text("Are you sure you want to delete this event? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissDeleteDialog()
+                        viewModel.onDeleteEvent {
+                            onEventDeleted()
+                        }
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDeleteDialog() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Event details") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        when (val state = viewModel.uiState) {
+            is JetpackComposeEventDetailViewModel.UiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            is JetpackComposeEventDetailViewModel.UiState.Success -> {
+                EventDetailContent(
+                    event = state.event,
+                    isAttending = state.isAttending,
+                    attendeesCount = state.attendeesCount,
+                    isOrganizer = state.isOrganizer,
+                    isJoining = viewModel.isJoining,
+                    onJoinEvent = { viewModel.onJoinEvent() },
+                    onLeaveEvent = { viewModel.onLeaveEvent() },
+                    onEditEvent = { onEditEvent(state.event.id) },
+                    onDeleteEvent = { viewModel.showDeleteConfirmation() },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            }
+            is JetpackComposeEventDetailViewModel.UiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = state.message,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Button(onClick = { viewModel.loadEvent(eventId) }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EventDetailContent(
+    event: Event,
+    isAttending: Boolean,
+    attendeesCount: Int,
+    isOrganizer: Boolean,
+    isJoining: Boolean,
+    onJoinEvent: () -> Unit,
+    onLeaveEvent: () -> Unit,
+    onEditEvent: () -> Unit,
+    onDeleteEvent: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        event.imageUrl?.let { url ->
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = event.dateTime.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy 'at' HH:mm")),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = event.location.formatAddress().takeIf { it.isNotEmpty() } ?: "Location not available",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            if (event.location.latitude != null && event.location.longitude != null) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                OutlinedButton(
+                    onClick = {
+                        val uri = android.net.Uri.parse("geo:${event.location.latitude},${event.location.longitude}?q=${event.location.latitude},${event.location.longitude}(${event.title})")
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("View location in Maps")
+                }
+            }
+
+            event.price?.let { price ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        if (price.isFree) Icons.Default.CheckCircle else Icons.Default.AttachMoney,
+                        contentDescription = null,
+                        tint = if (price.isFree) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = price.formatPrice(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (price.isFree) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            if (event.source == EventSource.USER_CREATED) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "$attendeesCount attendees",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+
+            AssistChip(
+                onClick = {},
+                label = { Text(event.category.name) },
+                leadingIcon = {
+                    Icon(Icons.Default.Star, contentDescription = null)
+                }
+            )
+
+            if (event.source == EventSource.EXTERNAL_API) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = "Ticketmaster external event",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            event.description?.let { description ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Description",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            event.externalUrl?.let { url ->
+                val context = androidx.compose.ui.platform.LocalContext.current
+                OutlinedButton(
+                    onClick = {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("See at Ticketmaster")
+                }
+            }
+
+            if (event.source == EventSource.USER_CREATED) {
+                if (isOrganizer) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onEditEvent,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit")
+                        }
+                        OutlinedButton(
+                            onClick = onDeleteEvent,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = if (isAttending) onLeaveEvent else onJoinEvent,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isJoining,
+                        colors = if (isAttending) {
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        } else {
+                            ButtonDefaults.buttonColors()
+                        }
+                    ) {
+                        if (isJoining) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Icon(
+                                if (isAttending) Icons.Default.Clear else Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (isAttending) "Leave event" else "Join event")
+                    }
+                }
+            }
+        }
+    }
+}

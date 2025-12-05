@@ -15,4 +15,6 @@ interface UserRepository {
     suspend fun existsWith(email: Email): Boolean
     suspend fun existsWith(uuid: UUID): Boolean
     suspend fun searchByName(query: String): Result<List<User>>
+    suspend fun updateProfileImage(userId: UUID, imageUrl: String): Result<Unit>
+
 }

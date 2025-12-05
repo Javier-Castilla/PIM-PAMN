@@ -1,5 +1,6 @@
 package software.ulpgc.wherewhen.presentation.profile
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,6 +12,7 @@ import software.ulpgc.wherewhen.domain.model.user.Profile
 import software.ulpgc.wherewhen.domain.usecases.user.GetUserUseCase
 import software.ulpgc.wherewhen.domain.usecases.user.UpdateUserProfileUseCase
 import software.ulpgc.wherewhen.domain.usecases.user.UpdateUserProfileDTO
+import software.ulpgc.wherewhen.domain.usecases.user.UpdateProfileImageUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.viewModels.ProfileViewModel
 
@@ -18,13 +20,16 @@ data class ProfileUiState(
     val profile: Profile? = null,
     val editName: String = "",
     val editDescription: String = "",
+    val selectedImageUri: Uri? = null,
+    val isUploadingImage: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
 class JetpackComposeProfileViewModel(
     private val getUserUseCase: GetUserUseCase,
-    private val updateUserProfileUseCase: UpdateUserProfileUseCase
+    private val updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private val updateProfileImageUseCase: UpdateProfileImageUseCase
 ) : ViewModel(), ProfileViewModel {
 
     var uiState by mutableStateOf(ProfileUiState())
@@ -58,7 +63,7 @@ class JetpackComposeProfileViewModel(
     }
 
     override fun showError(message: String) {
-        uiState = uiState.copy(isLoading = false, errorMessage = message)
+        uiState = uiState.copy(isLoading = false, errorMessage = message, isUploadingImage = false)
     }
 
     fun loadProfile() {
@@ -91,7 +96,8 @@ class JetpackComposeProfileViewModel(
         uiState.profile?.let {
             uiState = uiState.copy(
                 editName = it.name,
-                editDescription = it.description
+                editDescription = it.description,
+                selectedImageUri = null
             )
         }
     }
@@ -100,7 +106,8 @@ class JetpackComposeProfileViewModel(
         uiState.profile?.let {
             uiState = uiState.copy(
                 editName = it.name,
-                editDescription = it.description
+                editDescription = it.description,
+                selectedImageUri = null
             )
         }
     }
@@ -113,11 +120,17 @@ class JetpackComposeProfileViewModel(
         uiState = uiState.copy(editDescription = description, errorMessage = null)
     }
 
+    fun onImageSelected(uri: Uri) {
+        uiState = uiState.copy(selectedImageUri = uri, errorMessage = null)
+    }
+
     fun saveProfile() {
         val profile = uiState.profile ?: return
         val currentUser = FirebaseAuth.getInstance().currentUser ?: return
 
-        if (uiState.editName == profile.name && uiState.editDescription == profile.description) {
+        if (uiState.editName == profile.name &&
+            uiState.editDescription == profile.description &&
+            uiState.selectedImageUri == null) {
             return
         }
 
@@ -129,16 +142,36 @@ class JetpackComposeProfileViewModel(
                 return@launch
             }
 
-            val dto = UpdateUserProfileDTO(
-                name = uiState.editName,
-                description = uiState.editDescription
-            )
+            val userId = uuidResult.getOrThrow()
 
-            updateUserProfileUseCase(uuidResult.getOrThrow(), dto)
-                .fold(
-                    onSuccess = { showUpdateSuccess() },
-                    onFailure = { showError(it.message ?: "Failed to update profile") }
-                )
+            if (uiState.selectedImageUri != null) {
+                uiState = uiState.copy(isUploadingImage = true)
+                updateProfileImageUseCase(userId, uiState.selectedImageUri!!)
+                    .fold(
+                        onSuccess = {
+                            uiState = uiState.copy(isUploadingImage = false)
+                            updateProfileData(userId)
+                        },
+                        onFailure = {
+                            showError(it.message ?: "Failed to upload image")
+                        }
+                    )
+            } else {
+                updateProfileData(userId)
+            }
         }
+    }
+
+    private suspend fun updateProfileData(userId: UUID) {
+        val dto = UpdateUserProfileDTO(
+            name = uiState.editName,
+            description = uiState.editDescription
+        )
+
+        updateUserProfileUseCase(userId, dto)
+            .fold(
+                onSuccess = { showUpdateSuccess() },
+                onFailure = { showError(it.message ?: "Failed to update profile") }
+            )
     }
 }
