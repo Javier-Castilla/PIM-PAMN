@@ -30,6 +30,8 @@
             android:name="androidx.core.content.FileProvider"
             android:authorities="software.ulpgc.wherewhen.fileprovider"
             android:exported="false"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
