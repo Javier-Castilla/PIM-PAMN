@@ -4,12 +4,16 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,6 +43,7 @@ import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.CreateEventViewModelFactory
 
 class MainActivity : ComponentActivity() {
+
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -57,15 +62,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestLocationPermissions()
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = android.graphics.Color.parseColor("#161B22")
-        window.navigationBarColor = android.graphics.Color.parseColor("#161B22")
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
-        }
+        // Intenta evitar el scrim de contraste que puede cambiar el color de la barra
+        window.isNavigationBarContrastEnforced = false
+
+        requestLocationPermissions()
+        enableEdgeToEdge()
 
         setContent {
             WhereWhenTheme {
@@ -100,6 +102,23 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun AppNavigation() {
+        val view = LocalView.current
+        val isDark = isSystemInDarkTheme()
+        val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
+
+        DisposableEffect(surfaceColor, isDark) {
+            val window = (view.context as? ComponentActivity)?.window
+            window?.let {
+                it.statusBarColor = surfaceColor
+                it.navigationBarColor = surfaceColor
+                WindowCompat.getInsetsController(it, view).apply {
+                    isAppearanceLightStatusBars = !isDark
+                    isAppearanceLightNavigationBars = !isDark
+                }
+            }
+            onDispose {}
+        }
+
         val appContainer = (application as WhereWhenApplication).container
         var authState by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
         var showRegister by remember { mutableStateOf(false) }
@@ -123,6 +142,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             authState == null && showRegister -> {
                 val registerViewModel: JetpackComposeRegisterViewModel = viewModel(
                     factory = RegisterViewModelFactory(appContainer.registerUserUseCase)
@@ -138,6 +158,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             else -> {
                 val socialViewModel: JetpackComposeSocialViewModel = viewModel(
                     key = "social_$userId",
@@ -146,8 +167,10 @@ class MainActivity : ComponentActivity() {
                         appContainer.sendFriendRequestUseCase,
                         appContainer.checkFriendshipStatusUseCase,
                         appContainer.getPendingFriendRequestsUseCase,
+                        appContainer.getSentFriendRequestsUseCase,
                         appContainer.acceptFriendRequestUseCase,
                         appContainer.rejectFriendRequestUseCase,
+                        appContainer.cancelFriendRequestUseCase,
                         appContainer.getUserFriendsUseCase,
                         appContainer.removeFriendUseCase
                     )
@@ -157,7 +180,8 @@ class MainActivity : ComponentActivity() {
                     key = "profile_$userId",
                     factory = ProfileViewModelFactory(
                         appContainer.getUserUseCase,
-                        appContainer.updateUserProfileUseCase
+                        appContainer.updateUserProfileUseCase,
+                        appContainer.updateProfileImageUseCase
                     )
                 )
 

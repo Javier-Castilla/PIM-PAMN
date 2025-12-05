@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.infrastructure.persistence
+package software.ulpgc.wherewhen.infrastructure.persistence.cached
 
 import kotlinx.coroutines.flow.Flow
 import software.ulpgc.wherewhen.domain.model.events.Event

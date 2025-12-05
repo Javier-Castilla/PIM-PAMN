@@ -1,19 +1,25 @@
 package software.ulpgc.wherewhen.presentation.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.model.user.User
@@ -38,10 +44,8 @@ fun ChatScreen(
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.scrollToItem(uiState.messages.size - 1)
-
             val chatId = viewModel.getChatId()
             val userId = currentUserId?.let { UUID.parse(it).getOrNull() }
-
             if (chatId != null && userId != null) {
                 val hasUnreadFromOther = uiState.messages.any {
                     !it.isRead && it.senderId != userId
@@ -57,7 +61,37 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.otherUser?.name ?: "") },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (otherUser.profileImageUrl != null) {
+                            AsyncImage(
+                                model = otherUser.profileImageUrl,
+                                contentDescription = "Profile picture",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(uiState.otherUser?.name ?: "")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -177,6 +211,7 @@ fun MessageBubble(
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
+
                     if (isOwnMessage) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -207,7 +242,7 @@ fun MessageInputBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(top = 8.dp, bottom = 80.dp, start = 8.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(

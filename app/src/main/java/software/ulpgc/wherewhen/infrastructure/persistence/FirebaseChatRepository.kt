@@ -32,7 +32,6 @@ class FirebaseChatRepository(
     override suspend fun createOrGetChat(userId1: UUID, userId2: UUID): Result<Chat> = runCatching {
         val sortedIds = listOf(userId1.value, userId2.value).sorted()
         val chatDocId = "${sortedIds[0]}_${sortedIds[1]}"
-
         val document = firestore.collection(COLLECTION)
             .document(chatDocId)
             .get()
@@ -60,7 +59,6 @@ class FirebaseChatRepository(
             .limit(1)
             .get()
             .await()
-
         querySnapshot.documents.firstOrNull()?.toChat()
             ?: throw ChatNotFoundException(chatId)
     }
@@ -114,10 +112,8 @@ class FirebaseChatRepository(
             .limit(1)
             .get()
             .await()
-
         val docId = querySnapshot.documents.firstOrNull()?.id
             ?: throw ChatNotFoundException(chatId)
-
         firestore.collection(COLLECTION)
             .document(docId)
             .update(
@@ -131,17 +127,14 @@ class FirebaseChatRepository(
 
     override suspend fun incrementUnreadCount(chatId: UUID, userId: UUID): Result<Unit> = runCatching {
         val chat = getChat(chatId).getOrThrow()
-        val field = if (chat.participant1Id == userId) FIELD_UNREAD_COUNT_2 else FIELD_UNREAD_COUNT_1
-
+        val field = if (chat.participant1Id == userId) FIELD_UNREAD_COUNT_1 else FIELD_UNREAD_COUNT_2
         val querySnapshot = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_ID, chatId.value)
             .limit(1)
             .get()
             .await()
-
         val docId = querySnapshot.documents.firstOrNull()?.id
             ?: throw ChatNotFoundException(chatId)
-
         firestore.collection(COLLECTION)
             .document(docId)
             .update(field, com.google.firebase.firestore.FieldValue.increment(1))
@@ -151,16 +144,13 @@ class FirebaseChatRepository(
     override suspend fun resetUnreadCount(chatId: UUID, userId: UUID): Result<Unit> = runCatching {
         val chat = getChat(chatId).getOrThrow()
         val field = if (chat.participant1Id == userId) FIELD_UNREAD_COUNT_1 else FIELD_UNREAD_COUNT_2
-
         val querySnapshot = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_ID, chatId.value)
             .limit(1)
             .get()
             .await()
-
         val docId = querySnapshot.documents.firstOrNull()?.id
             ?: throw ChatNotFoundException(chatId)
-
         firestore.collection(COLLECTION)
             .document(docId)
             .update(field, 0)
@@ -181,19 +171,15 @@ class FirebaseChatRepository(
         val id = getString(FIELD_ID)
             ?.let { UUID.parse(it).getOrThrow() }
             ?: throw IllegalStateException("Missing id field")
-
         val participant1Id = getString(FIELD_PARTICIPANT1_ID)
             ?.let { UUID.parse(it).getOrThrow() }
             ?: throw IllegalStateException("Missing participant1Id field")
-
         val participant2Id = getString(FIELD_PARTICIPANT2_ID)
             ?.let { UUID.parse(it).getOrThrow() }
             ?: throw IllegalStateException("Missing participant2Id field")
-
         val lastMessage = getString(FIELD_LAST_MESSAGE)
         val lastMessageAt = getString(FIELD_LAST_MESSAGE_AT)
             ?.let { LocalDateTime.parse(it, DATE_FORMATTER) }
-
         val unreadCount1 = getLong(FIELD_UNREAD_COUNT_1)?.toInt() ?: 0
         val unreadCount2 = getLong(FIELD_UNREAD_COUNT_2)?.toInt() ?: 0
 

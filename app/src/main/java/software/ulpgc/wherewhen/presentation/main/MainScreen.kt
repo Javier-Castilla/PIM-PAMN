@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.presentation.events.EventsScreen
@@ -102,63 +103,74 @@ fun MainScreen(
 
         else -> {
             Scaffold(
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    NavigationBar {
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                            label = { Text("Events") },
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 }
-                        )
+                    Surface(
+                        shadowElevation = 8.dp
+                    ) {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ) {
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                                label = { Text("Events") },
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 }
+                            )
 
-                        NavigationBarItem(
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                        if (socialViewModel.uiState.pendingRequests.isNotEmpty()) {
-                                            Badge {
-                                                Text("${socialViewModel.uiState.pendingRequests.size}")
+                            NavigationBarItem(
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (socialViewModel.uiState.receivedRequests.isNotEmpty()) {
+                                                Badge {
+                                                    Text("${socialViewModel.uiState.receivedRequests.size}")
+                                                }
                                             }
                                         }
+                                    ) {
+                                        Icon(Icons.Default.Person, contentDescription = null)
                                     }
-                                ) {
-                                    Icon(Icons.Default.Person, contentDescription = null)
-                                }
-                            },
-                            label = { Text("Social") },
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 }
-                        )
+                                },
+                                label = { Text("Social") },
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 }
+                            )
 
-                        NavigationBarItem(
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                        if (chatsViewModel.totalUnreadCount > 0) {
-                                            Badge {
-                                                Text("${chatsViewModel.totalUnreadCount}")
+                            NavigationBarItem(
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (chatsViewModel.totalUnreadCount > 0) {
+                                                Badge {
+                                                    Text("${chatsViewModel.totalUnreadCount}")
+                                                }
                                             }
                                         }
+                                    ) {
+                                        Icon(Icons.Default.Email, contentDescription = null)
                                     }
-                                ) {
-                                    Icon(Icons.Default.Email, contentDescription = null)
-                                }
-                            },
-                            label = { Text("Messages") },
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 }
-                        )
+                                },
+                                label = { Text("Messages") },
+                                selected = selectedTab == 2,
+                                onClick = { selectedTab = 2 }
+                            )
 
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
-                            label = { Text("Profile") },
-                            selected = selectedTab == 3,
-                            onClick = { selectedTab = 3 }
-                        )
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
+                                label = { Text("Profile") },
+                                selected = selectedTab == 3,
+                                onClick = { selectedTab = 3 }
+                            )
+                        }
                     }
                 }
             ) { paddingValues ->
-                Box(modifier = Modifier.padding(paddingValues)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 80.dp)
+                ) {
                     when (selectedTab) {
                         0 -> EventsScreen(
                             viewModel = eventsViewModel,

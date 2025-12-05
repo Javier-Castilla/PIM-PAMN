@@ -1,18 +1,23 @@
 package software.ulpgc.wherewhen.presentation.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
 import java.time.format.DateTimeFormatter
 
@@ -90,14 +95,34 @@ fun ChatItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            if (chatWithUser.otherUser.profileImageUrl != null) {
+                AsyncImage(
+                    model = chatWithUser.otherUser.profileImageUrl,
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = chatWithUser.otherUser.name,
@@ -116,6 +141,7 @@ fun ChatItem(
                     )
                 }
             }
+
             Column(horizontalAlignment = Alignment.End) {
                 if (chatWithUser.lastMessageAt != null) {
                     Text(
@@ -126,6 +152,7 @@ fun ChatItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
                 if (chatWithUser.unreadCount > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Badge {

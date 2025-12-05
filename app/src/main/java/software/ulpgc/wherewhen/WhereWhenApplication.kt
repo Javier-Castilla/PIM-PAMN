@@ -20,7 +20,11 @@ import software.ulpgc.wherewhen.domain.usecases.chat.*
 import software.ulpgc.wherewhen.domain.usecases.events.*
 import software.ulpgc.wherewhen.infrastructure.api.TicketmasterExternalEventApiService
 import software.ulpgc.wherewhen.infrastructure.location.AndroidLocationService
-import software.ulpgc.wherewhen.infrastructure.persistence.CachedEventRepository
+import software.ulpgc.wherewhen.infrastructure.persistence.cached.CachedChatRepository
+import software.ulpgc.wherewhen.infrastructure.persistence.cached.CachedEventRepository
+import software.ulpgc.wherewhen.infrastructure.persistence.cached.CachedFriendshipRepository
+import software.ulpgc.wherewhen.infrastructure.persistence.cached.CachedFriendRequestRepository
+import software.ulpgc.wherewhen.infrastructure.persistence.cached.CachedMessageRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.CompositeEventRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseAuthenticationRepository
 import software.ulpgc.wherewhen.infrastructure.persistence.FirebaseUserRepository
@@ -76,6 +80,9 @@ interface AppContainer {
     val updateUserEventUseCase: UpdateUserEventUseCase
     val locationService: LocationService
     val imageUploadService: ImageUploadService
+    val getSentFriendRequestsUseCase: GetSentFriendRequestsUseCase
+    val cancelFriendRequestUseCase: CancelFriendRequestUseCase
+    val updateProfileImageUseCase: UpdateProfileImageUseCase
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -92,19 +99,19 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     private val friendRequestRepository: FriendRequestRepository by lazy {
-        FirebaseFriendRequestRepository()
+        CachedFriendRequestRepository(FirebaseFriendRequestRepository())
     }
 
     private val friendshipRepository: FriendshipRepository by lazy {
-        FirebaseFriendshipRepository()
+        CachedFriendshipRepository(FirebaseFriendshipRepository())
     }
 
     private val chatRepository: ChatRepository by lazy {
-        FirebaseChatRepository()
+        CachedChatRepository(FirebaseChatRepository())
     }
 
     private val messageRepository: MessageRepository by lazy {
-        FirebaseMessageRepository()
+        CachedMessageRepository(FirebaseMessageRepository())
     }
 
     private val userEventRepository: UserEventRepository by lazy {
@@ -129,6 +136,15 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
             context = context,
             apiKey = BuildConfig.IMGBB_API_KEY
         )
+    }
+    override val getSentFriendRequestsUseCase: GetSentFriendRequestsUseCase by lazy {
+        GetSentFriendRequestsUseCase(friendRequestRepository, userRepository)
+    }
+    override val cancelFriendRequestUseCase: CancelFriendRequestUseCase by lazy {
+        CancelFriendRequestUseCase(friendRequestRepository)
+    }
+    override val updateProfileImageUseCase: UpdateProfileImageUseCase by lazy {
+        UpdateProfileImageUseCase(imageUploadService, userRepository)
     }
 
     override val authenticateUserUseCase: AuthenticateUserUseCase by lazy {

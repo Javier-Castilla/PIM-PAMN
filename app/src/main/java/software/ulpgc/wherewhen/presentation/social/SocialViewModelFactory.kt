@@ -10,8 +10,10 @@ class SocialViewModelFactory(
     private val sendFriendRequestUseCase: SendFriendRequestUseCase,
     private val checkFriendshipStatusUseCase: CheckFriendshipStatusUseCase,
     private val getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase,
+    private val getSentFriendRequestsUseCase: GetSentFriendRequestsUseCase,
     private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
     private val rejectFriendRequestUseCase: RejectFriendRequestUseCase,
+    private val cancelFriendRequestUseCase: CancelFriendRequestUseCase,
     private val getUserFriendsUseCase: GetUserFriendsUseCase,
     private val removeFriendUseCase: RemoveFriendUseCase
 ) : ViewModelProvider.Factory {
@@ -23,8 +25,10 @@ class SocialViewModelFactory(
                 sendFriendRequestUseCase,
                 checkFriendshipStatusUseCase,
                 getPendingFriendRequestsUseCase,
+                getSentFriendRequestsUseCase,
                 acceptFriendRequestUseCase,
                 rejectFriendRequestUseCase,
+                cancelFriendRequestUseCase,
                 getUserFriendsUseCase,
                 removeFriendUseCase
             ) as T
