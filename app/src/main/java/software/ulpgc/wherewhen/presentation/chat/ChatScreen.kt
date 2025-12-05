@@ -59,7 +59,8 @@ fun ChatScreen(
     }
 
     Scaffold(
-        modifier = Modifier.imePadding(),
+        modifier = Modifier,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -239,7 +240,7 @@ fun MessageInputBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Bottom
     ) {
