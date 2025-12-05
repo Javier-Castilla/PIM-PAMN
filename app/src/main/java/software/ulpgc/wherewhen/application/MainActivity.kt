@@ -41,6 +41,8 @@ import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventVie
 import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.CreateEventViewModelFactory
+import software.ulpgc.wherewhen.presentation.social.JetpackComposeUserProfileViewModel
+import software.ulpgc.wherewhen.presentation.social.UserProfileViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -235,8 +237,24 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
+                val userProfileViewModel: JetpackComposeUserProfileViewModel = viewModel(
+                    key = "user_profile_$userId",
+                    factory = UserProfileViewModelFactory(
+                        appContainer.getUserUseCase,
+                        appContainer.checkFriendshipStatusUseCase,
+                        appContainer.sendFriendRequestUseCase,
+                        appContainer.cancelFriendRequestUseCase,
+                        appContainer.acceptFriendRequestUseCase,
+                        appContainer.rejectFriendRequestUseCase,
+                        appContainer.getPendingFriendRequestsUseCase,
+                        appContainer.getSentFriendRequestsUseCase,
+                        appContainer.removeFriendUseCase
+                    )
+                )
+
                 MainScreen(
                     socialViewModel = socialViewModel,
+                    userProfileViewModel = userProfileViewModel,
                     profileViewModel = profileViewModel,
                     chatsViewModel = chatsViewModel,
                     chatViewModel = chatViewModel,

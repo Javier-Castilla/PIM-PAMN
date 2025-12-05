@@ -1,10 +1,12 @@
 package software.ulpgc.wherewhen.presentation.social
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,7 +24,8 @@ import software.ulpgc.wherewhen.domain.usecases.friendship.FriendshipStatus
 @Composable
 fun SocialScreen(
     viewModel: JetpackComposeSocialViewModel,
-    onMessageClick: (User) -> Unit = {}
+    onMessageClick: (User) -> Unit = {},
+    onUserClick: (String) -> Unit = {}
 ) {
     val uiState = viewModel.uiState
     var selectedTab by remember { mutableStateOf(0) }
@@ -77,16 +80,20 @@ fun SocialScreen(
             }
 
             when (selectedTab) {
-                0 -> SearchTab(viewModel, uiState)
-                1 -> RequestsTab(viewModel, uiState)
-                2 -> FriendsTab(viewModel, uiState, onMessageClick)
+                0 -> SearchTab(viewModel, uiState, onUserClick)
+                1 -> RequestsTab(viewModel, uiState, onUserClick)
+                2 -> FriendsTab(viewModel, uiState, onMessageClick, onUserClick)
             }
         }
     }
 }
 
 @Composable
-fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) {
+fun SearchTab(
+    viewModel: JetpackComposeSocialViewModel,
+    uiState: SocialUiState,
+    onUserClick: (String) -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = uiState.searchQuery,
@@ -96,6 +103,7 @@ fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) 
                 .padding(16.dp),
             label = { Text("Search users") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            shape = RoundedCornerShape(24.dp),
             singleLine = true
         )
 
@@ -125,7 +133,8 @@ fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) 
                     items(uiState.users) { userWithStatus ->
                         UserCard(
                             userWithStatus = userWithStatus,
-                            onAddClick = { viewModel.sendFriendRequest(userWithStatus.user.uuid) }
+                            onAddClick = { viewModel.sendFriendRequest(userWithStatus.user.uuid) },
+                            onUserClick = onUserClick
                         )
                     }
                 }
@@ -135,7 +144,11 @@ fun SearchTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) 
 }
 
 @Composable
-fun RequestsTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState) {
+fun RequestsTab(
+    viewModel: JetpackComposeSocialViewModel,
+    uiState: SocialUiState,
+    onUserClick: (String) -> Unit
+) {
     if (uiState.receivedRequests.isEmpty() && uiState.sentRequests.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No pending requests")
@@ -158,6 +171,7 @@ fun RequestsTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
+                            .clickable { onUserClick(requestWithUser.user.uuid.value) }
                     ) {
                         Row(
                             modifier = Modifier
@@ -242,6 +256,7 @@ fun RequestsTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
+                            .clickable { onUserClick(requestWithUser.user.uuid.value) }
                     ) {
                         Row(
                             modifier = Modifier
@@ -307,7 +322,8 @@ fun RequestsTab(viewModel: JetpackComposeSocialViewModel, uiState: SocialUiState
 fun FriendsTab(
     viewModel: JetpackComposeSocialViewModel,
     uiState: SocialUiState,
-    onMessageClick: (User) -> Unit
+    onMessageClick: (User) -> Unit,
+    onUserClick: (String) -> Unit
 ) {
     if (uiState.friendToRemove != null) {
         AlertDialog(
@@ -340,6 +356,7 @@ fun FriendsTab(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
+                        .clickable { onUserClick(friend.uuid.value) }
                 ) {
                     Row(
                         modifier = Modifier
@@ -400,11 +417,16 @@ fun FriendsTab(
 }
 
 @Composable
-fun UserCard(userWithStatus: UserWithStatus, onAddClick: () -> Unit) {
+fun UserCard(
+    userWithStatus: UserWithStatus,
+    onAddClick: () -> Unit,
+    onUserClick: (String) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .clickable { onUserClick(userWithStatus.user.uuid.value) }
     ) {
         Row(
             modifier = Modifier

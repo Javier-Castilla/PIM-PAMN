@@ -190,6 +190,7 @@ private fun FilterContent(
                     }
                 }
             },
+            shape = RoundedCornerShape(24.dp),
             singleLine = true
         )
 

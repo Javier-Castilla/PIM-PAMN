@@ -59,6 +59,7 @@ fun ChatScreen(
     }
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             TopAppBar(
                 title = {
@@ -235,37 +236,32 @@ fun MessageInputBar(
     onMessageTextChange: (String) -> Unit,
     onSendClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 8.dp
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Bottom
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 80.dp, start = 8.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        OutlinedTextField(
+            value = messageText,
+            onValueChange = onMessageTextChange,
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("Type a message...") },
+            shape = RoundedCornerShape(24.dp),
+            maxLines = 4
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        FilledIconButton(
+            onClick = onSendClick,
+            enabled = messageText.isNotBlank(),
+            modifier = Modifier.size(48.dp),
+            shape = CircleShape
         ) {
-            OutlinedTextField(
-                value = messageText,
-                onValueChange = onMessageTextChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message...") },
-                maxLines = 4
+            Icon(
+                Icons.AutoMirrored.Filled.Send,
+                contentDescription = "Send"
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(
-                onClick = onSendClick,
-                enabled = messageText.isNotBlank()
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = if (messageText.isNotBlank())
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                )
-            }
         }
     }
 }
