@@ -59,7 +59,6 @@ fun ChatScreen(
     }
 
     Scaffold(
-        modifier = Modifier,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
@@ -100,16 +99,9 @@ fun ChatScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            MessageInputBar(
-                messageText = uiState.messageText,
-                onMessageTextChange = { viewModel.onMessageTextChange(it) },
-                onSendClick = { viewModel.sendMessage() }
-            )
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -132,17 +124,25 @@ fun ChatScreen(
                 }
                 uiState.messages.isEmpty() -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("No messages yet. Start the conversation!")
                     }
+                    MessageInputBar(
+                        messageText = uiState.messageText,
+                        onMessageTextChange = { viewModel.onMessageTextChange(it) },
+                        onSendClick = { viewModel.sendMessage() }
+                    )
                 }
                 else -> {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
-                            .fillMaxSize()
+                            .weight(1f)
+                            .fillMaxWidth()
                             .padding(horizontal = 8.dp),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
@@ -153,6 +153,11 @@ fun ChatScreen(
                             )
                         }
                     }
+                    MessageInputBar(
+                        messageText = uiState.messageText,
+                        onMessageTextChange = { viewModel.onMessageTextChange(it) },
+                        onSendClick = { viewModel.sendMessage() }
+                    )
                 }
             }
         }

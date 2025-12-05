@@ -64,10 +64,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Intenta evitar el scrim de contraste que puede cambiar el color de la barra
-        window.isNavigationBarContrastEnforced = false
-
         requestLocationPermissions()
         enableEdgeToEdge()
 
