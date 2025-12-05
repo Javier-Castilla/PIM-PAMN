@@ -187,6 +187,26 @@ private fun EventDetailContent(
                 )
             }
 
+            if (event.location.latitude != null && event.location.longitude != null) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                OutlinedButton(
+                    onClick = {
+                        val uri = android.net.Uri.parse("geo:${event.location.latitude},${event.location.longitude}?q=${event.location.latitude},${event.location.longitude}(${event.title})")
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("View location in Maps")
+                }
+            }
+
             event.price?.let { price ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -307,7 +327,6 @@ private fun EventDetailContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Edit")
                         }
-
                         OutlinedButton(
                             onClick = onDeleteEvent,
                             modifier = Modifier.weight(1f),
@@ -348,9 +367,9 @@ private fun EventDetailContent(
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (isAttending) "Leave event" else "Join event")
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (isAttending) "Leave event" else "Join event")
                     }
                 }
             }
