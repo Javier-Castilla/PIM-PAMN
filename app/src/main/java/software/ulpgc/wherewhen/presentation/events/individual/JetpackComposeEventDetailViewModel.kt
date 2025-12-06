@@ -14,11 +14,13 @@ import software.ulpgc.wherewhen.domain.exceptions.events.EventNotFoundException
 import software.ulpgc.wherewhen.domain.exceptions.events.NotAttendingEventException
 import software.ulpgc.wherewhen.domain.exceptions.events.UnauthorizedEventAccessException
 import software.ulpgc.wherewhen.domain.model.events.Event
+import software.ulpgc.wherewhen.domain.model.events.EventStatus
 import software.ulpgc.wherewhen.domain.usecases.events.DeleteUserEventUseCase
 import software.ulpgc.wherewhen.domain.usecases.events.GetEventAttendeesUseCase
 import software.ulpgc.wherewhen.domain.usecases.events.GetEventByIdUseCase
 import software.ulpgc.wherewhen.domain.usecases.events.JoinEventUseCase
 import software.ulpgc.wherewhen.domain.usecases.events.LeaveEventUseCase
+import software.ulpgc.wherewhen.domain.usecases.events.UpdateUserEventStatusUseCase
 import software.ulpgc.wherewhen.domain.usecases.user.GetUserUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.viewModels.EventDetailViewModel
@@ -29,6 +31,7 @@ class JetpackComposeEventDetailViewModel(
     private val leaveEventUseCase: LeaveEventUseCase,
     private val getEventAttendeesUseCase: GetEventAttendeesUseCase,
     private val deleteUserEventUseCase: DeleteUserEventUseCase,
+    private val updateEventStatusUseCase: UpdateUserEventStatusUseCase,
     private val getUserUseCase: GetUserUseCase
 ) : ViewModel(), EventDetailViewModel {
 
@@ -69,19 +72,21 @@ class JetpackComposeEventDetailViewModel(
     var showAttendeesDialog by mutableStateOf(false)
         private set
 
+    var showStatusDialog by mutableStateOf(false)
+        private set
+
     private var currentEventId: UUID? = null
-    private var currentEvent: Event? = null
 
     override fun loadEvent(eventId: UUID) {
         currentEventId = eventId
         viewModelScope.launch {
             uiState = UiState.Loading
+            isJoining = false
             Log.d("EventDetailViewModel", "Loading event $eventId")
             getEventByIdUseCase(eventId).fold(
                 onSuccess = { event ->
                     Log.d("EventDetailViewModel", "Event loaded ${event.title}")
-                    currentEvent = event
-                    loadAttendees()
+                    loadAttendeesWithEvent(event)
                 },
                 onFailure = { exception ->
                     Log.e("EventDetailViewModel", "Error loading event", exception)
@@ -99,6 +104,7 @@ class JetpackComposeEventDetailViewModel(
             inlineErrorMessage = "Event is full"
             return
         }
+
         viewModelScope.launch {
             isJoining = true
             inlineErrorMessage = null
@@ -115,8 +121,8 @@ class JetpackComposeEventDetailViewModel(
                         loadEvent(eventId)
                     } else {
                         uiState = UiState.Error(handleException(exception))
+                        isJoining = false
                     }
-                    isJoining = false
                 }
             )
         }
@@ -125,6 +131,7 @@ class JetpackComposeEventDetailViewModel(
     override fun onLeaveEvent() {
         val eventId = currentEventId ?: return
         val userId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
             isJoining = true
             inlineErrorMessage = null
@@ -160,6 +167,30 @@ class JetpackComposeEventDetailViewModel(
         }
     }
 
+    fun onUpdateStatus(newStatus: EventStatus) {
+        val eventId = currentEventId ?: return
+        val userId = getCurrentUserId() ?: return
+
+        viewModelScope.launch {
+            Log.d("EventDetailViewModel", "Updating event status to $newStatus")
+            updateEventStatusUseCase(eventId, newStatus, userId).fold(
+                onSuccess = { updatedEvent ->
+                    Log.d("EventDetailViewModel", "Status updated successfully")
+                    val state = uiState
+                    if (state is UiState.Success) {
+                        uiState = state.copy(event = updatedEvent)
+                    }
+                    dismissStatusDialog()
+                },
+                onFailure = { exception ->
+                    Log.e("EventDetailViewModel", "Error updating status", exception)
+                    inlineErrorMessage = handleException(exception)
+                    dismissStatusDialog()
+                }
+            )
+        }
+    }
+
     fun showDeleteConfirmation() {
         showDeleteDialog = true
     }
@@ -180,66 +211,89 @@ class JetpackComposeEventDetailViewModel(
         showAttendeesDialog = true
     }
 
+    fun showStatusDialog() {
+        showStatusDialog = true
+    }
+
+    fun dismissStatusDialog() {
+        showStatusDialog = false
+    }
+
     override fun loadAttendees() {
         val eventId = currentEventId ?: return
-        val event = currentEvent ?: return
-        val currentUserId = getCurrentUserId() ?: return
         viewModelScope.launch {
-            Log.d("EventDetailViewModel", "Loading attendees for $eventId")
-            val attendeesResult = getEventAttendeesUseCase(eventId)
-            if (attendeesResult.isSuccess) {
-                val attendeeIds = attendeesResult.getOrNull()!!
-                val attendees = attendeeIds.mapNotNull { attendeeId ->
-                    getUserUseCase(attendeeId).getOrNull()?.let { user ->
-                        AttendeeUi(
-                            id = attendeeId,
-                            uuidValue = user.uuid.value,
-                            name = user.name,
-                            profileImageUrl = user.profileImageUrl,
-                            isOrganizer = event.organizerId == attendeeId,
-                            isCurrentUser = attendeeId == currentUserId
-                        )
-                    }
+            getEventByIdUseCase(eventId).fold(
+                onSuccess = { event ->
+                    loadAttendeesWithEvent(event)
+                },
+                onFailure = { }
+            )
+        }
+    }
+
+    private suspend fun loadAttendeesWithEvent(event: Event) {
+        val eventId = event.id
+        val currentUserId = getCurrentUserId() ?: return
+
+        Log.d("EventDetailViewModel", "Loading attendees for $eventId")
+        val attendeesResult = getEventAttendeesUseCase(eventId)
+        if (attendeesResult.isSuccess) {
+            val attendeeIds = attendeesResult.getOrNull()!!
+            val attendees = attendeeIds.mapNotNull { attendeeId ->
+                getUserUseCase(attendeeId).getOrNull()?.let { user ->
+                    AttendeeUi(
+                        id = attendeeId,
+                        uuidValue = user.uuid.value,
+                        name = user.name,
+                        profileImageUrl = user.profileImageUrl,
+                        isOrganizer = event.organizerId == attendeeId,
+                        isCurrentUser = attendeeId == currentUserId
+                    )
                 }
-                val isAttending = attendees.any { it.id == currentUserId }
-                val isOrganizer = event.organizerId == currentUserId
-                val isFull = event.isFull(attendees.size)
-                Log.d(
-                    "EventDetailViewModel",
-                    "Attendees ${attendees.size}, isAttending=$isAttending, isOrganizer=$isOrganizer, isFull=$isFull"
-                )
-                val organizerName = if (isOrganizer) {
-                    "You"
-                } else {
-                    event.organizerId?.let { organizerId ->
-                        attendees.firstOrNull { a -> a.id == organizerId }?.name
-                    }
-                }
-                uiState = UiState.Success(
-                    event = event,
-                    isAttending = isAttending,
-                    attendees = attendees,
-                    isOrganizer = isOrganizer,
-                    isFull = isFull,
-                    organizerName = organizerName
-                )
-            } else {
-                Log.e(
-                    "EventDetailViewModel",
-                    "Error loading attendees",
-                    attendeesResult.exceptionOrNull()
-                )
-                val isOrganizer = event.organizerId == currentUserId
-                val organizerName = if (isOrganizer) "You" else null
-                uiState = UiState.Success(
-                    event = event,
-                    isAttending = false,
-                    attendees = emptyList(),
-                    isOrganizer = isOrganizer,
-                    isFull = false,
-                    organizerName = organizerName
-                )
             }
+
+            val isAttending = attendees.any { it.id == currentUserId }
+            val isOrganizer = event.organizerId == currentUserId
+            val isFull = event.isFull(attendees.size)
+            Log.d(
+                "EventDetailViewModel",
+                "Attendees ${attendees.size}, isAttending=$isAttending, isOrganizer=$isOrganizer, isFull=$isFull"
+            )
+
+            val organizerName = if (isOrganizer) {
+                "You"
+            } else {
+                event.organizerId?.let { organizerId ->
+                    attendees.firstOrNull { a -> a.id == organizerId }?.name
+                }
+            }
+
+            uiState = UiState.Success(
+                event = event,
+                isAttending = isAttending,
+                attendees = attendees,
+                isOrganizer = isOrganizer,
+                isFull = isFull,
+                organizerName = organizerName
+            )
+        } else {
+            Log.e(
+                "EventDetailViewModel",
+                "Error loading attendees",
+                attendeesResult.exceptionOrNull()
+            )
+
+            val isOrganizer = event.organizerId == currentUserId
+            val organizerName = if (isOrganizer) "You" else null
+
+            uiState = UiState.Success(
+                event = event,
+                isAttending = false,
+                attendees = emptyList(),
+                isOrganizer = isOrganizer,
+                isFull = false,
+                organizerName = organizerName
+            )
         }
     }
 

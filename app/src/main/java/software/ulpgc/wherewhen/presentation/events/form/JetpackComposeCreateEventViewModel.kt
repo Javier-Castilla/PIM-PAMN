@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.events
+package software.ulpgc.wherewhen.presentation.events.form
 
 import android.app.Application
 import android.content.Context
@@ -411,9 +411,12 @@ class JetpackComposeCreateEventViewModel(
                 updateUserEventUseCase(
                     eventId = editingEventId!!,
                     newTitle = title,
+                    newDescription = description.takeIf { it.isNotBlank() },
+                    newCategory = selectedCategory,
                     newLocation = location,
                     newDateTime = dateTime,
                     newEndDateTime = endDateTime,
+                    newMaxAttendees = maxAttendeesInt,
                     newImageUrl = uploadedImageUrl,
                     newPrice = price
                 ).fold(

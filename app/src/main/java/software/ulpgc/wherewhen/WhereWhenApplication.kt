@@ -83,6 +83,7 @@ interface AppContainer {
     val getSentFriendRequestsUseCase: GetSentFriendRequestsUseCase
     val cancelFriendRequestUseCase: CancelFriendRequestUseCase
     val updateProfileImageUseCase: UpdateProfileImageUseCase
+    val updateUserEventStatusUseCase: UpdateUserEventStatusUseCase
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -145,6 +146,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
     override val updateProfileImageUseCase: UpdateProfileImageUseCase by lazy {
         UpdateProfileImageUseCase(imageUploadService, userRepository)
+    }
+    override val updateUserEventStatusUseCase: UpdateUserEventStatusUseCase by lazy {
+        UpdateUserEventStatusUseCase(userEventRepository)
     }
 
     override val authenticateUserUseCase: AuthenticateUserUseCase by lazy {

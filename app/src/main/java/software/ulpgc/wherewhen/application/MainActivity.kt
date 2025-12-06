@@ -37,10 +37,10 @@ import software.ulpgc.wherewhen.presentation.chat.individual.ChatViewModelFactor
 import software.ulpgc.wherewhen.presentation.chat.list.ChatsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
 import software.ulpgc.wherewhen.presentation.events.individual.JetpackComposeEventDetailViewModel
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
+import software.ulpgc.wherewhen.presentation.events.form.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
-import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
-import software.ulpgc.wherewhen.presentation.events.CreateEventViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.individual.EventDetailViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.form.CreateEventViewModelFactory
 import software.ulpgc.wherewhen.presentation.social.individual.JetpackComposeUserProfileViewModel
 import software.ulpgc.wherewhen.presentation.social.individual.UserProfileViewModelFactory
 
@@ -218,6 +218,7 @@ class MainActivity : ComponentActivity() {
                         appContainer.leaveEventUseCase,
                         appContainer.getEventAttendeesUseCase,
                         appContainer.deleteUserEventUseCase,
+                        appContainer.updateUserEventStatusUseCase,
                         appContainer.getUserUseCase
                     )
                 )
