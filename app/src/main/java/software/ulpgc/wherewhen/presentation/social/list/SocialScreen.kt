@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.social
+package software.ulpgc.wherewhen.presentation.social.list
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,11 +24,12 @@ import software.ulpgc.wherewhen.domain.usecases.friendship.FriendshipStatus
 @Composable
 fun SocialScreen(
     viewModel: JetpackComposeSocialViewModel,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
     onMessageClick: (User) -> Unit = {},
     onUserClick: (String) -> Unit = {}
 ) {
     val uiState = viewModel.uiState
-    var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(selectedTab) {
         when (selectedTab) {
@@ -51,13 +52,13 @@ fun SocialScreen(
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = { onTabSelected(0) },
                     text = { Text("Search") },
                     icon = { Icon(Icons.Default.Search, contentDescription = null) }
                 )
                 Tab(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = { onTabSelected(1) },
                     text = { Text("Requests") },
                     icon = {
                         BadgedBox(
@@ -73,7 +74,7 @@ fun SocialScreen(
                 )
                 Tab(
                     selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    onClick = { onTabSelected(2) },
                     text = { Text("Friends") },
                     icon = { Icon(Icons.Default.Person, contentDescription = null) }
                 )

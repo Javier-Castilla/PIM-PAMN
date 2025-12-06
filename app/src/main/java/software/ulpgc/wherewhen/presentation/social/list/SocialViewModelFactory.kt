@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.social
+package software.ulpgc.wherewhen.presentation.social.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

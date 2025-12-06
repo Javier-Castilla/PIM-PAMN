@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.chat
+package software.ulpgc.wherewhen.presentation.chat.individual
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf

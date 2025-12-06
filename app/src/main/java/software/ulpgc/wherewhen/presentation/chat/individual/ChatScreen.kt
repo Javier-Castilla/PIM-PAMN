@@ -1,6 +1,7 @@
-package software.ulpgc.wherewhen.presentation.chat
+package software.ulpgc.wherewhen.presentation.chat.individual
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,7 +32,8 @@ import java.time.format.DateTimeFormatter
 fun ChatScreen(
     viewModel: JetpackComposeChatViewModel,
     otherUser: User,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onUserClick: (String) -> Unit
 ) {
     val uiState = viewModel.uiState
     val listState = rememberLazyListState()
@@ -50,7 +52,6 @@ fun ChatScreen(
                 val hasUnreadFromOther = uiState.messages.any {
                     !it.isRead && it.senderId != userId
                 }
-
                 if (hasUnreadFromOther) {
                     viewModel.markMessagesAsRead(chatId, userId)
                 }
@@ -63,7 +64,12 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onUserClick(otherUser.uuid.value) }
+                    ) {
                         if (otherUser.profileImageUrl != null) {
                             AsyncImage(
                                 model = otherUser.profileImageUrl,
@@ -95,7 +101,10 @@ fun ChatScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
@@ -218,7 +227,6 @@ fun MessageBubble(
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
-
                     if (isOwnMessage) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(

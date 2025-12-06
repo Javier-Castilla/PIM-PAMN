@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.chat
+package software.ulpgc.wherewhen.presentation.chat.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

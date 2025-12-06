@@ -14,6 +14,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class FirebaseEventRepository : UserEventRepository {
+
     private val firestore = FirebaseFirestore.getInstance()
     private val eventsCollection = firestore.collection("events")
     private val attendanceCollection = firestore.collection("event_attendance")
@@ -74,13 +75,11 @@ class FirebaseEventRepository : UserEventRepository {
                     close(error)
                     return@addSnapshotListener
                 }
-
                 val events = snapshot?.documents?.mapNotNull {
                     FirebaseEventMapper.fromFirestore(it)
                 } ?: emptyList()
                 trySend(events)
             }
-
         awaitClose { listener.remove() }
     }
 
@@ -104,7 +103,6 @@ class FirebaseEventRepository : UserEventRepository {
                     )
                     distance <= radiusKm
                 }
-
             Result.success(events)
         } catch (e: Exception) {
             Result.failure(e)
@@ -121,7 +119,6 @@ class FirebaseEventRepository : UserEventRepository {
                 "status" to AttendanceStatus.GOING.name,
                 "joinedAt" to LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
             )
-
             attendanceCollection.document(attendanceId).set(attendanceMap).await()
 
             val eventDoc = eventsCollection.document(eventId.value).get().await()
@@ -166,7 +163,6 @@ class FirebaseEventRepository : UserEventRepository {
                 .mapNotNull { doc ->
                     doc.getString("userId")?.let { UUID.parse(it).getOrNull() }
                 }
-
             Result.success(attendees)
         } catch (e: Exception) {
             Result.failure(e)
@@ -187,7 +183,6 @@ class FirebaseEventRepository : UserEventRepository {
                 val snapshot = eventsCollection.document(eventId).get().await()
                 FirebaseEventMapper.fromFirestore(snapshot)
             }
-
             Result.success(events)
         } catch (e: Exception) {
             Result.failure(e)
@@ -203,7 +198,6 @@ class FirebaseEventRepository : UserEventRepository {
                 .await()
                 .documents
                 .mapNotNull { FirebaseEventMapper.fromFirestore(it) }
-
             Result.success(events)
         } catch (e: Exception) {
             Result.failure(e)
@@ -216,12 +210,10 @@ class FirebaseEventRepository : UserEventRepository {
         val lat2Rad = Math.toRadians(lat2)
         val deltaLat = Math.toRadians(lat2 - lat1)
         val deltaLon = Math.toRadians(lon2 - lon1)
-
         val a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
                 Math.cos(lat1Rad) * Math.cos(lat2Rad) *
                 Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
         return R * c
     }
 }

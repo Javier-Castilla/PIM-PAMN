@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.chat
+package software.ulpgc.wherewhen.presentation.chat.list
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,7 +41,8 @@ class JetpackComposeChatsViewModel(
     }
 
     override fun showChats(chats: List<ChatWithUser>) {
-        uiState = uiState.copy(chats = chats, isLoading = false, errorMessage = null)
+        val sorted = chats.sortedByDescending { it.lastMessageAt }
+        uiState = uiState.copy(chats = sorted, isLoading = false, errorMessage = null)
     }
 
     override fun showError(message: String) {

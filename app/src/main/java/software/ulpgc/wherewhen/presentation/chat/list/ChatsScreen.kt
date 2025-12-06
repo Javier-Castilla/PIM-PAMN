@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.chat
+package software.ulpgc.wherewhen.presentation.chat.list
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
