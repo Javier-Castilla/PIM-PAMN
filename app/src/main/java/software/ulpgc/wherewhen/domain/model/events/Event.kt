@@ -19,7 +19,8 @@ data class Event(
     val price: Price?,
     val distance: Double?,
     val status: EventStatus,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val maxAttendees: Int? = null
 ) {
     fun isUserCreated(): Boolean = source == EventSource.USER_CREATED
     fun isOfficial(): Boolean = source == EventSource.EXTERNAL_API
@@ -27,4 +28,7 @@ data class Event(
     fun isNearby(userLocation: Location, radiusKm: Double): Boolean {
         return location.distanceTo(userLocation) <= radiusKm
     }
+    fun hasCapacityLimit(): Boolean = maxAttendees != null
+    fun isFull(currentAttendees: Int): Boolean =
+        maxAttendees != null && currentAttendees >= maxAttendees
 }

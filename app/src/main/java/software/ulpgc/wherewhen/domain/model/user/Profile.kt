@@ -1,7 +1,7 @@
 package software.ulpgc.wherewhen.domain.model.user
 
 import software.ulpgc.wherewhen.domain.valueObjects.Email
-import software.ulpgc.wherewhen.domain.valueObjects.UUID;
+import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.LocalDateTime
 
 data class Profile(
@@ -9,12 +9,14 @@ data class Profile(
     val email: Email,
     val name: String,
     val description: String = "",
+    val profileImageUrl: String? = null,
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {
     fun toPublicUser() = User(
         uuid = uuid,
         name = name,
         description = description,
+        profileImageUrl = profileImageUrl,
         createdAt = createdAt
     )
 }

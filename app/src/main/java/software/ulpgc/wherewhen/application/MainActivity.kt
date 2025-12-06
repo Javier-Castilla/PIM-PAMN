@@ -1,21 +1,21 @@
 package software.ulpgc.wherewhen.application
 
-import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import software.ulpgc.wherewhen.WhereWhenApplication
@@ -27,18 +27,22 @@ import software.ulpgc.wherewhen.presentation.auth.register.RegisterScreen
 import software.ulpgc.wherewhen.presentation.auth.register.JetpackComposeRegisterViewModel
 import software.ulpgc.wherewhen.presentation.auth.register.RegisterViewModelFactory
 import software.ulpgc.wherewhen.presentation.main.MainScreen
-import software.ulpgc.wherewhen.presentation.social.JetpackComposeSocialViewModel
-import software.ulpgc.wherewhen.presentation.social.SocialViewModelFactory
+import software.ulpgc.wherewhen.presentation.social.list.JetpackComposeSocialViewModel
+import software.ulpgc.wherewhen.presentation.social.list.SocialViewModelFactory
 import software.ulpgc.wherewhen.presentation.profile.JetpackComposeProfileViewModel
 import software.ulpgc.wherewhen.presentation.profile.ProfileViewModelFactory
-import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatViewModel
-import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatsViewModel
-import software.ulpgc.wherewhen.presentation.chat.ChatViewModelFactory
-import software.ulpgc.wherewhen.presentation.chat.ChatsViewModelFactory
+import software.ulpgc.wherewhen.presentation.chat.individual.JetpackComposeChatViewModel
+import software.ulpgc.wherewhen.presentation.chat.list.JetpackComposeChatsViewModel
+import software.ulpgc.wherewhen.presentation.chat.individual.ChatViewModelFactory
+import software.ulpgc.wherewhen.presentation.chat.list.ChatsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.individual.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.CreateEventViewModelFactory
+import software.ulpgc.wherewhen.presentation.social.individual.JetpackComposeUserProfileViewModel
+import software.ulpgc.wherewhen.presentation.social.individual.UserProfileViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -46,31 +50,27 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         when {
-            permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true -> {
-                println("Permiso de ubicación concedido")
+            permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true -> {
+                println("Location permission granted")
             }
-            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true -> {
-                println("Permiso de ubicación aproximada concedido")
+            permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true -> {
+                println("Coarse location permission granted")
             }
             else -> {
-                println("Permisos de ubicación denegados")
+                println("Location permissions denied")
             }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         requestLocationPermissions()
-
         enableEdgeToEdge()
+
         setContent {
-            WindowInsets.safeDrawing
             WhereWhenTheme {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.safeDrawing),
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     AppNavigation()
@@ -83,15 +83,15 @@ class MainActivity : ComponentActivity() {
         when {
             ContextCompat.checkSelfPermission(
                 this,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
-                println("Ya tiene permisos de ubicación")
+                println("Location permissions already granted")
             }
             else -> {
                 locationPermissionRequest.launch(
                     arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
+                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                        android.Manifest.permission.ACCESS_COARSE_LOCATION
                     )
                 )
             }
@@ -100,6 +100,23 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun AppNavigation() {
+        val view = LocalView.current
+        val isDark = isSystemInDarkTheme()
+        val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
+
+        DisposableEffect(surfaceColor, isDark) {
+            val window = (view.context as? ComponentActivity)?.window
+            window?.let {
+                it.statusBarColor = surfaceColor
+                it.navigationBarColor = surfaceColor
+                WindowCompat.getInsetsController(it, view).apply {
+                    isAppearanceLightStatusBars = !isDark
+                    isAppearanceLightNavigationBars = !isDark
+                }
+            }
+            onDispose {}
+        }
+
         val appContainer = (application as WhereWhenApplication).container
         var authState by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
         var showRegister by remember { mutableStateOf(false) }
@@ -123,6 +140,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             authState == null && showRegister -> {
                 val registerViewModel: JetpackComposeRegisterViewModel = viewModel(
                     factory = RegisterViewModelFactory(appContainer.registerUserUseCase)
@@ -138,6 +156,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             else -> {
                 val socialViewModel: JetpackComposeSocialViewModel = viewModel(
                     key = "social_$userId",
@@ -146,8 +165,10 @@ class MainActivity : ComponentActivity() {
                         appContainer.sendFriendRequestUseCase,
                         appContainer.checkFriendshipStatusUseCase,
                         appContainer.getPendingFriendRequestsUseCase,
+                        appContainer.getSentFriendRequestsUseCase,
                         appContainer.acceptFriendRequestUseCase,
                         appContainer.rejectFriendRequestUseCase,
+                        appContainer.cancelFriendRequestUseCase,
                         appContainer.getUserFriendsUseCase,
                         appContainer.removeFriendUseCase
                     )
@@ -157,7 +178,8 @@ class MainActivity : ComponentActivity() {
                     key = "profile_$userId",
                     factory = ProfileViewModelFactory(
                         appContainer.getUserUseCase,
-                        appContainer.updateUserProfileUseCase
+                        appContainer.updateUserProfileUseCase,
+                        appContainer.updateProfileImageUseCase
                     )
                 )
 
@@ -194,17 +216,48 @@ class MainActivity : ComponentActivity() {
                         appContainer.getEventByIdUseCase,
                         appContainer.joinEventUseCase,
                         appContainer.leaveEventUseCase,
-                        appContainer.getEventAttendeesUseCase
+                        appContainer.getEventAttendeesUseCase,
+                        appContainer.deleteUserEventUseCase,
+                        appContainer.getUserUseCase
+                    )
+                )
+
+                val createEventViewModel: JetpackComposeCreateEventViewModel = viewModel(
+                    key = "create_event_$userId",
+                    factory = CreateEventViewModelFactory(
+                        application,
+                        appContainer.createUserEventUseCase,
+                        appContainer.updateUserEventUseCase,
+                        appContainer.getEventByIdUseCase,
+                        appContainer.locationService,
+                        appContainer.imageUploadService
+                    )
+                )
+
+                val userProfileViewModel: JetpackComposeUserProfileViewModel = viewModel(
+                    key = "user_profile_$userId",
+                    factory = UserProfileViewModelFactory(
+                        appContainer.getUserUseCase,
+                        appContainer.checkFriendshipStatusUseCase,
+                        appContainer.sendFriendRequestUseCase,
+                        appContainer.cancelFriendRequestUseCase,
+                        appContainer.acceptFriendRequestUseCase,
+                        appContainer.rejectFriendRequestUseCase,
+                        appContainer.getPendingFriendRequestsUseCase,
+                        appContainer.getSentFriendRequestsUseCase,
+                        appContainer.removeFriendUseCase
                     )
                 )
 
                 MainScreen(
                     socialViewModel = socialViewModel,
+                    userProfileViewModel = userProfileViewModel,
                     profileViewModel = profileViewModel,
                     chatsViewModel = chatsViewModel,
                     chatViewModel = chatViewModel,
                     eventsViewModel = eventsViewModel,
                     eventDetailViewModel = eventDetailViewModel,
+                    createEventViewModel = createEventViewModel,
                     onLogout = {
                         FirebaseAuth.getInstance().signOut()
                         authState = null

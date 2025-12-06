@@ -54,6 +54,16 @@ class FirebaseFriendRequestRepository(
             .mapNotNull { it.toFriendRequest() }
     }
 
+    override suspend fun getSentRequestsFromUser(userId: UUID): Result<List<FriendRequest>> = runCatching {
+        firestore.collection(COLLECTION)
+            .whereEqualTo(FIELD_SENDER_ID, userId.value)
+            .whereEqualTo(FIELD_STATUS, FriendRequestStatus.PENDING.name)
+            .get()
+            .await()
+            .documents
+            .mapNotNull { it.toFriendRequest() }
+    }
+
     override suspend fun getPendingBetweenUsers(senderId: UUID, receiverId: UUID): Result<FriendRequest?> = runCatching {
         firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_SENDER_ID, senderId.value)

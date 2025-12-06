@@ -1,6 +1,10 @@
 package software.ulpgc.wherewhen.presentation.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -10,8 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -23,6 +29,16 @@ fun ProfileScreen(
 ) {
     val uiState = viewModel.uiState
     var isEditing by remember { mutableStateOf(false) }
+    var showImageDialog by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onImageSelected(it) }
+    }
+
+    val currentImageModel: Any? =
+        uiState.selectedImageUri ?: uiState.profile?.profileImageUrl
 
     Scaffold(
         topBar = {
@@ -61,13 +77,17 @@ fun ProfileScreen(
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.error
                         )
+
                         Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
                             text = uiState.errorMessage,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyLarge
                         )
+
                         Spacer(modifier = Modifier.height(16.dp))
+
                         Button(onClick = { viewModel.loadProfile() }) {
                             Text("Retry")
                         }
@@ -81,20 +101,73 @@ fun ProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            modifier = Modifier.size(120.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            if (currentImageModel != null) {
+                                AsyncImage(
+                                    model = currentImageModel,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .clickable {
+                                            if (isEditing) {
+                                                imagePickerLauncher.launch("image/*")
+                                            } else if (uiState.profile.profileImageUrl != null || uiState.selectedImageUri != null) {
+                                                showImageDialog = true
+                                            }
+                                        },
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer)
+                                        .clickable(enabled = isEditing) {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(60.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+
+                            if (isEditing) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                        .clickable { imagePickerLauncher.launch("image/*") },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.CameraAlt,
+                                        contentDescription = "Change photo",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            if (uiState.isUploadingImage) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
                         }
+
                         Spacer(modifier = Modifier.height(24.dp))
+
                         if (isEditing) {
                             OutlinedTextField(
                                 value = uiState.editName,
@@ -104,7 +177,9 @@ fun ProfileScreen(
                                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                                 singleLine = true
                             )
+
                             Spacer(modifier = Modifier.height(16.dp))
+
                             OutlinedTextField(
                                 value = uiState.editDescription,
                                 onValueChange = { viewModel.onDescriptionChange(it) },
@@ -114,7 +189,9 @@ fun ProfileScreen(
                                 minLines = 3,
                                 maxLines = 5
                             )
+
                             Spacer(modifier = Modifier.height(24.dp))
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -128,6 +205,7 @@ fun ProfileScreen(
                                 ) {
                                     Text("Cancel")
                                 }
+
                                 Button(
                                     onClick = {
                                         viewModel.saveProfile()
@@ -144,14 +222,18 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
+
                             Spacer(modifier = Modifier.height(8.dp))
+
                             Text(
                                 text = uiState.profile.email.value,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+
                             if (uiState.profile.description.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(16.dp))
+
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
@@ -165,7 +247,9 @@ fun ProfileScreen(
                                     )
                                 }
                             }
+
                             Spacer(modifier = Modifier.height(32.dp))
+
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
@@ -184,40 +268,74 @@ fun ProfileScreen(
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary
                                         )
+
                                         Spacer(modifier = Modifier.width(12.dp))
+
                                         Column {
                                             Text(
                                                 "Member since",
                                                 style = MaterialTheme.typography.labelMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
+
                                             Spacer(modifier = Modifier.height(4.dp))
+
                                             Text(
                                                 uiState.profile.createdAt.format(
-                                                    DateTimeFormatter.ofPattern("MMMM dd, yyyy", Locale.ENGLISH)
+                                                    DateTimeFormatter.ofPattern(
+                                                        "MMMM dd, yyyy",
+                                                        Locale.ENGLISH
+                                                    )
                                                 ),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Medium
                                             )
                                         }
                                     }
+
+                                    Spacer(modifier = Modifier.height(24.dp))
+
+                                    Button(
+                                        onClick = {
+                                            isEditing = true
+                                            viewModel.startEdit()
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Edit Profile")
+                                    }
                                 }
-                            }
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = {
-                                    isEditing = true
-                                    viewModel.startEdit()
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Edit Profile")
                             }
                         }
                     }
                 }
+            }
+
+            if (showImageDialog && currentImageModel != null) {
+                AlertDialog(
+                    onDismissRequest = { showImageDialog = false },
+                    confirmButton = {},
+                    dismissButton = {},
+                    text = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = currentImageModel,
+                                contentDescription = "Profile picture large",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                )
             }
         }
     }

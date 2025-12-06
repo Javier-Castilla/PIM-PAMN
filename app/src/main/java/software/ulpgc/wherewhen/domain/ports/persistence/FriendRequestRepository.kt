@@ -12,4 +12,6 @@ interface FriendRequestRepository {
     suspend fun getPendingBetweenUsers(senderId: UUID, receiverId: UUID): Result<FriendRequest?>
     suspend fun updateStatus(id: UUID, status: FriendRequestStatus, respondedAt: LocalDateTime): Result<FriendRequest>
     suspend fun delete(id: UUID): Result<Unit>
+    suspend fun getSentRequestsFromUser(userId: UUID): Result<List<FriendRequest>>
+
 }

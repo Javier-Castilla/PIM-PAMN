@@ -39,203 +39,208 @@ fun RegisterScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .imePadding()
+            .padding(24.dp)
     ) {
-        if (uiState.isSuccess) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (uiState.isSuccess) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "✓ Registration Successful",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "Create Account",
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+            }
+
+            OutlinedTextField(
+                value = uiState.name,
+                onValueChange = viewModel::onNameChange,
+                label = { Text("Name") },
+                leadingIcon = {
+                    Icon(Icons.Default.Person, contentDescription = "Name")
+                },
+                isError = uiState.nameError != null,
+                supportingText = uiState.nameError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
                 ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(bottom = 16.dp),
+                enabled = !uiState.isLoading && !uiState.isSuccess
+            )
+
+            OutlinedTextField(
+                value = uiState.email,
+                onValueChange = viewModel::onEmailChange,
+                label = { Text("Email") },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = "Email")
+                },
+                isError = uiState.emailError != null,
+                supportingText = uiState.emailError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                enabled = !uiState.isLoading && !uiState.isSuccess
+            )
+
+            var passwordVisible by remember { mutableStateOf(false) }
+            OutlinedTextField(
+                value = uiState.password,
+                onValueChange = viewModel::onPasswordChange,
+                label = { Text("Password") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Password")
+                },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            if (passwordVisible) Icons.Default.Visibility
+                            else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password"
+                            else "Show password"
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+                isError = uiState.passwordError != null,
+                supportingText = uiState.passwordError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                enabled = !uiState.isLoading && !uiState.isSuccess
+            )
+
+            var confirmPasswordVisible by remember { mutableStateOf(false) }
+            OutlinedTextField(
+                value = uiState.confirmPassword,
+                onValueChange = viewModel::onConfirmPasswordChange,
+                label = { Text("Confirm Password") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Confirm Password")
+                },
+                trailingIcon = {
+                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                        Icon(
+                            if (confirmPasswordVisible) Icons.Default.Visibility
+                            else Icons.Default.VisibilityOff,
+                            contentDescription = if (confirmPasswordVisible) "Hide password"
+                            else "Show password"
+                        )
+                    }
+                },
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+                isError = uiState.confirmPasswordError != null,
+                supportingText = uiState.confirmPasswordError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        viewModel.onRegisterClick()
+                    }
+                ),
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                enabled = !uiState.isLoading && !uiState.isSuccess
+            )
+
+            if (uiState.errorMessage != null) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
                 ) {
                     Text(
-                        text = "✓ Registration Successful",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        text = uiState.errorMessage,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
-        }
 
-        Text(
-            text = "Create Account",
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-
-        OutlinedTextField(
-            value = uiState.name,
-            onValueChange = viewModel::onNameChange,
-            label = { Text("Name") },
-            leadingIcon = {
-                Icon(Icons.Default.Person, contentDescription = "Name")
-            },
-            isError = uiState.nameError != null,
-            supportingText = uiState.nameError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            enabled = !uiState.isLoading && !uiState.isSuccess
-        )
-
-        OutlinedTextField(
-            value = uiState.email,
-            onValueChange = viewModel::onEmailChange,
-            label = { Text("Email") },
-            leadingIcon = {
-                Icon(Icons.Default.Email, contentDescription = "Email")
-            },
-            isError = uiState.emailError != null,
-            supportingText = uiState.emailError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            enabled = !uiState.isLoading && !uiState.isSuccess
-        )
-
-        var passwordVisible by remember { mutableStateOf(false) }
-        OutlinedTextField(
-            value = uiState.password,
-            onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
-            leadingIcon = {
-                Icon(Icons.Default.Lock, contentDescription = "Password")
-            },
-            trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(
-                        if (passwordVisible) Icons.Default.Visibility
-                        else Icons.Default.VisibilityOff,
-                        contentDescription = if (passwordVisible) "Hide password"
-                        else "Show password"
-                    )
-                }
-            },
-            visualTransformation = if (passwordVisible) VisualTransformation.None
-            else PasswordVisualTransformation(),
-            isError = uiState.passwordError != null,
-            supportingText = uiState.passwordError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            enabled = !uiState.isLoading && !uiState.isSuccess
-        )
-
-        var confirmPasswordVisible by remember { mutableStateOf(false) }
-        OutlinedTextField(
-            value = uiState.confirmPassword,
-            onValueChange = viewModel::onConfirmPasswordChange,
-            label = { Text("Confirm Password") },
-            leadingIcon = {
-                Icon(Icons.Default.Lock, contentDescription = "Confirm Password")
-            },
-            trailingIcon = {
-                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                    Icon(
-                        if (confirmPasswordVisible) Icons.Default.Visibility
-                        else Icons.Default.VisibilityOff,
-                        contentDescription = if (confirmPasswordVisible) "Hide password"
-                        else "Show password"
-                    )
-                }
-            },
-            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
-            else PasswordVisualTransformation(),
-            isError = uiState.confirmPasswordError != null,
-            supportingText = uiState.confirmPasswordError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    focusManager.clearFocus()
-                    viewModel.onRegisterClick()
-                }
-            ),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            enabled = !uiState.isLoading && !uiState.isSuccess
-        )
-
-        if (uiState.errorMessage != null) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ),
+            Button(
+                onClick = { viewModel.onRegisterClick() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .height(56.dp),
+                enabled = !uiState.isLoading && !uiState.isSuccess
             ) {
-                Text(
-                    text = uiState.errorMessage,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(16.dp)
-                )
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Register", style = MaterialTheme.typography.titleMedium)
+                }
             }
-        }
 
-        Button(
-            onClick = { viewModel.onRegisterClick() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            enabled = !uiState.isLoading && !uiState.isSuccess
-        ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Text("Register", style = MaterialTheme.typography.titleMedium)
+            TextButton(
+                onClick = onNavigateToLogin,
+                modifier = Modifier.padding(top = 16.dp),
+                enabled = !uiState.isLoading
+            ) {
+                Text("Already have an account? Log In")
             }
-        }
-
-        TextButton(
-            onClick = onNavigateToLogin,
-            modifier = Modifier.padding(top = 16.dp),
-            enabled = !uiState.isLoading
-        ) {
-            Text("Already have an account? Log In")
         }
     }
 }

@@ -22,6 +22,7 @@ class FirebaseUserRepository(
         const val FIELD_EMAIL = "email"
         const val FIELD_NAME = "name"
         const val FIELD_DESCRIPTION = "description"
+        const val FIELD_PROFILE_IMAGE_URL = "profileImageUrl"
         const val FIELD_CREATED_AT = "createdAt"
         val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     }
@@ -130,11 +131,19 @@ class FirebaseUserRepository(
             }
     }
 
+    override suspend fun updateProfileImage(userId: UUID, imageUrl: String): Result<Unit> = runCatching {
+        firestore.collection(COLLECTION)
+            .document(userId.value)
+            .update(FIELD_PROFILE_IMAGE_URL, imageUrl)
+            .await()
+    }
+
     private fun Profile.toMap() = mapOf(
         FIELD_UUID to uuid.value,
         FIELD_EMAIL to email.value,
         FIELD_NAME to name,
         FIELD_DESCRIPTION to description,
+        FIELD_PROFILE_IMAGE_URL to profileImageUrl,
         FIELD_CREATED_AT to createdAt.format(DATE_FORMATTER)
     )
 
@@ -142,6 +151,7 @@ class FirebaseUserRepository(
         FIELD_EMAIL to email.value,
         FIELD_NAME to name,
         FIELD_DESCRIPTION to description,
+        FIELD_PROFILE_IMAGE_URL to profileImageUrl,
         FIELD_CREATED_AT to createdAt.format(DATE_FORMATTER)
     )
 
@@ -159,11 +169,13 @@ class FirebaseUserRepository(
 
         val description = getString(FIELD_DESCRIPTION) ?: ""
 
+        val profileImageUrl = getString(FIELD_PROFILE_IMAGE_URL)
+
         val createdAt = getString(FIELD_CREATED_AT)
             ?.let { LocalDateTime.parse(it, DATE_FORMATTER) }
             ?: throw IllegalStateException("Missing createdAt field")
 
-        return Profile(uuid, email, name, description, createdAt)
+        return Profile(uuid, email, name, description, profileImageUrl, createdAt)
     }
 
     private fun DocumentSnapshot.toPublicUser(): User {
@@ -176,10 +188,12 @@ class FirebaseUserRepository(
 
         val description = getString(FIELD_DESCRIPTION) ?: ""
 
+        val profileImageUrl = getString(FIELD_PROFILE_IMAGE_URL)
+
         val createdAt = getString(FIELD_CREATED_AT)
             ?.let { LocalDateTime.parse(it, DATE_FORMATTER) }
             ?: throw IllegalStateException("Missing createdAt field")
 
-        return User(uuid, name, description, createdAt)
+        return User(uuid, name, description, profileImageUrl, createdAt)
     }
 }
