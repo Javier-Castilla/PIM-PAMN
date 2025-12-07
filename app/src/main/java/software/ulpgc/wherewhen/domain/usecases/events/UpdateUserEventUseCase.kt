@@ -3,6 +3,8 @@ package software.ulpgc.wherewhen.domain.usecases.events
 import software.ulpgc.wherewhen.domain.exceptions.events.EventNotFoundException
 import software.ulpgc.wherewhen.domain.exceptions.events.InvalidEventException
 import software.ulpgc.wherewhen.domain.model.events.Event
+import software.ulpgc.wherewhen.domain.model.events.EventCategory
+import software.ulpgc.wherewhen.domain.model.events.EventStatus
 import software.ulpgc.wherewhen.domain.model.events.Location
 import software.ulpgc.wherewhen.domain.model.events.Price
 import software.ulpgc.wherewhen.domain.ports.persistence.UserEventRepository
@@ -15,9 +17,12 @@ class UpdateUserEventUseCase(
     suspend operator fun invoke(
         eventId: UUID,
         newTitle: String? = null,
+        newDescription: String? = null,
+        newCategory: EventCategory? = null,
         newLocation: Location? = null,
         newDateTime: LocalDateTime? = null,
         newEndDateTime: LocalDateTime? = null,
+        newMaxAttendees: Int? = null,
         newImageUrl: String? = null,
         newPrice: Price? = null
     ): Result<Event> {
@@ -36,13 +41,27 @@ class UpdateUserEventUseCase(
                 throw InvalidEventException("End date must be after start date")
             }
 
+            val datesChanged =
+                dateTime != existingEvent.dateTime ||
+                        endDateTime != existingEvent.endDateTime
+
+            val newStatus = if (datesChanged) {
+                EventStatus.RESCHEDULED
+            } else {
+                existingEvent.status
+            }
+
             val updatedEvent = existingEvent.copy(
                 title = title,
+                description = newDescription ?: existingEvent.description,
+                category = newCategory ?: existingEvent.category,
                 location = newLocation ?: existingEvent.location,
                 dateTime = dateTime,
                 endDateTime = endDateTime,
+                maxAttendees = newMaxAttendees ?: existingEvent.maxAttendees,
                 imageUrl = newImageUrl ?: existingEvent.imageUrl,
-                price = newPrice ?: existingEvent.price
+                price = newPrice ?: existingEvent.price,
+                status = newStatus
             )
 
             userEventRepository.updateUserEvent(updatedEvent)

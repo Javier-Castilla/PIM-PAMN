@@ -7,6 +7,7 @@ import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import kotlinx.coroutines.flow.Flow
 
 interface ExternalEventRepository {
+
     suspend fun searchNearbyEvents(
         location: Location,
         radiusKm: Int = 25
@@ -24,13 +25,11 @@ interface ExternalEventRepository {
         radiusKm: Int = 25
     ): Result<List<Event>>
 
-    //TODO: borrar esto o que?
     suspend fun getAllNearbyEvents(
         location: Location,
         radiusKm: Int = 25
     ): Result<List<Event>>
 
-    //TODO: borrar esto o que?
     suspend fun getAllEventsByCategory(
         location: Location,
         category: EventCategory,
@@ -46,6 +45,8 @@ interface ExternalEventRepository {
     suspend fun deleteUserEvent(eventId: UUID): Result<Unit>
 
     fun observeUserEvents(organizerId: UUID): Flow<List<Event>>
+
+    fun observeEventById(eventId: UUID): Flow<Event?>
 
     suspend fun joinEvent(eventId: UUID, userId: UUID): Result<Unit>
 

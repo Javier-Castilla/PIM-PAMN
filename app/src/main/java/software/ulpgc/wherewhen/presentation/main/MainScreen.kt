@@ -1,31 +1,49 @@
 package software.ulpgc.wherewhen.presentation.main
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import software.ulpgc.wherewhen.presentation.chat.individual.ChatScreen
+import software.ulpgc.wherewhen.presentation.chat.individual.JetpackComposeChatViewModel
+import software.ulpgc.wherewhen.presentation.chat.list.ChatsScreen
+import software.ulpgc.wherewhen.presentation.chat.list.JetpackComposeChatsViewModel
+import software.ulpgc.wherewhen.presentation.events.form.CreateEventScreen
 import software.ulpgc.wherewhen.presentation.events.EventsScreen
-import software.ulpgc.wherewhen.presentation.events.EventDetailScreen
-import software.ulpgc.wherewhen.presentation.events.CreateEventScreen
+import software.ulpgc.wherewhen.presentation.events.form.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
-import software.ulpgc.wherewhen.presentation.social.SocialScreen
-import software.ulpgc.wherewhen.presentation.social.UserProfileScreen
-import software.ulpgc.wherewhen.presentation.social.JetpackComposeSocialViewModel
-import software.ulpgc.wherewhen.presentation.social.JetpackComposeUserProfileViewModel
-import software.ulpgc.wherewhen.presentation.profile.ProfileScreen
+import software.ulpgc.wherewhen.presentation.events.individual.EventDetailScreen
+import software.ulpgc.wherewhen.presentation.events.individual.JetpackComposeEventDetailViewModel
 import software.ulpgc.wherewhen.presentation.profile.JetpackComposeProfileViewModel
-import software.ulpgc.wherewhen.presentation.chat.ChatsScreen
-import software.ulpgc.wherewhen.presentation.chat.ChatScreen
-import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatsViewModel
-import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatViewModel
+import software.ulpgc.wherewhen.presentation.profile.ProfileScreen
+import software.ulpgc.wherewhen.presentation.social.individual.JetpackComposeUserProfileViewModel
+import software.ulpgc.wherewhen.presentation.social.individual.UserProfileScreen
+import software.ulpgc.wherewhen.presentation.social.list.JetpackComposeSocialViewModel
+import software.ulpgc.wherewhen.presentation.social.list.SocialScreen
 
 @Composable
 fun MainScreen(
@@ -46,6 +64,9 @@ fun MainScreen(
     var editingEventId by remember { mutableStateOf<UUID?>(null) }
     var isCreatingEvent by remember { mutableStateOf(false) }
     var selectedUserProfileId by remember { mutableStateOf<String?>(null) }
+    var returnToChatUser by remember { mutableStateOf<User?>(null) }
+    var returnToEvent by remember { mutableStateOf(false) }
+    var socialSelectedTab by remember { mutableStateOf(0) }
 
     BackHandler(enabled = true) {
         when {
@@ -53,9 +74,17 @@ fun MainScreen(
                 isCreatingEvent = false
                 editingEventId = null
             }
+            selectedUserProfileId != null -> {
+                selectedUserProfileId = null
+                if (returnToEvent) {
+                    returnToEvent = false
+                } else if (returnToChatUser != null) {
+                    selectedChatUser = returnToChatUser
+                    returnToChatUser = null
+                }
+            }
             selectedEventId != null -> selectedEventId = null
             selectedChatUser != null -> selectedChatUser = null
-            selectedUserProfileId != null -> selectedUserProfileId = null
             else -> onBackPressed()
         }
     }
@@ -100,9 +129,19 @@ fun MainScreen(
             UserProfileScreen(
                 viewModel = userProfileViewModel,
                 profileId = selectedUserProfileId!!,
-                onBackClick = { selectedUserProfileId = null },
+                onBackClick = {
+                    selectedUserProfileId = null
+                    if (returnToEvent) {
+                        returnToEvent = false
+                    } else if (returnToChatUser != null) {
+                        selectedChatUser = returnToChatUser
+                        returnToChatUser = null
+                    }
+                },
                 onMessageClick = { user ->
                     selectedUserProfileId = null
+                    returnToEvent = false
+                    returnToChatUser = null
                     selectedChatUser = user
                 }
             )
@@ -111,7 +150,13 @@ fun MainScreen(
             ChatScreen(
                 viewModel = chatViewModel,
                 otherUser = selectedChatUser!!,
-                onBackClick = { selectedChatUser = null }
+                onBackClick = { selectedChatUser = null },
+                onUserClick = { userId ->
+                    returnToEvent = false
+                    returnToChatUser = selectedChatUser
+                    selectedChatUser = null
+                    selectedUserProfileId = userId
+                }
             )
         }
         else -> {
@@ -125,7 +170,7 @@ fun MainScreen(
                             containerColor = MaterialTheme.colorScheme.surface
                         ) {
                             NavigationBarItem(
-                                icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                                icon = { androidx.compose.material3.Icon(Icons.Default.Home, contentDescription = null) },
                                 label = { Text("Events") },
                                 selected = selectedTab == 0,
                                 onClick = { selectedTab = 0 }
@@ -141,7 +186,7 @@ fun MainScreen(
                                             }
                                         }
                                     ) {
-                                        Icon(Icons.Default.Person, contentDescription = null)
+                                        androidx.compose.material3.Icon(Icons.Default.Person, contentDescription = null)
                                     }
                                 },
                                 label = { Text("Social") },
@@ -159,7 +204,7 @@ fun MainScreen(
                                             }
                                         }
                                     ) {
-                                        Icon(Icons.Default.Email, contentDescription = null)
+                                        androidx.compose.material3.Icon(Icons.Default.Email, contentDescription = null)
                                     }
                                 },
                                 label = { Text("Messages") },
@@ -167,7 +212,7 @@ fun MainScreen(
                                 onClick = { selectedTab = 2 }
                             )
                             NavigationBarItem(
-                                icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
+                                icon = { androidx.compose.material3.Icon(Icons.Default.AccountCircle, contentDescription = null) },
                                 label = { Text("Profile") },
                                 selected = selectedTab == 3,
                                 onClick = { selectedTab = 3 }
@@ -175,7 +220,7 @@ fun MainScreen(
                         }
                     }
                 }
-            ) { paddingValues ->
+            ) { _ ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -189,10 +234,15 @@ fun MainScreen(
                         )
                         1 -> SocialScreen(
                             viewModel = socialViewModel,
+                            selectedTab = socialSelectedTab,
+                            onTabSelected = { index ->
+                                socialSelectedTab = index
+                            },
                             onMessageClick = { friend ->
                                 selectedChatUser = friend
                             },
                             onUserClick = { userId ->
+                                returnToEvent = false
                                 selectedUserProfileId = userId
                             }
                         )

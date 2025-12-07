@@ -10,6 +10,12 @@ data class Location(
     val city: String?,
     val country: String?
 ) {
+    companion object {
+        fun of(latitude: Double, longitude: Double): Location {
+            return Location(latitude, longitude, null, null, null, null)
+        }
+    }
+
     fun distanceTo(other: Location): Double {
         val R = 6371.0
         val lat1Rad = Math.toRadians(latitude)

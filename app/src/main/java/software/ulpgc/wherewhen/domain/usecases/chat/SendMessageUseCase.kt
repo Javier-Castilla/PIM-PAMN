@@ -12,6 +12,7 @@ class SendMessageUseCase(
     private val chatRepository: ChatRepository,
     private val messageRepository: MessageRepository
 ) {
+
     suspend operator fun invoke(
         chatId: UUID,
         senderId: UUID,
@@ -37,11 +38,9 @@ class SendMessageUseCase(
                 isRead = false
             )
 
-            messageRepository.sendMessage(message)
-                .onSuccess {
-                    chatRepository.updateLastMessage(chatId, content, message.timestamp)
-                    chatRepository.incrementUnreadCount(chatId, receiverId)
-                }
+            messageRepository.sendMessage(message).getOrThrow()
+            chatRepository.updateLastMessage(chatId, content, message.timestamp).getOrThrow()
+            chatRepository.incrementUnreadCount(chatId, receiverId).getOrThrow()
 
             Result.success(message)
         } catch (e: Exception) {

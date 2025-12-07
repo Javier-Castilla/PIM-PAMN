@@ -29,6 +29,6 @@ data class Event(
         return location.distanceTo(userLocation) <= radiusKm
     }
     fun hasCapacityLimit(): Boolean = maxAttendees != null
-    fun isFull(currentAttendees: Int): Boolean = maxAttendees != null && currentAttendees >= maxAttendees
+    fun isFull(currentAttendees: Int): Boolean =
+        maxAttendees != null && currentAttendees >= maxAttendees
 }
-

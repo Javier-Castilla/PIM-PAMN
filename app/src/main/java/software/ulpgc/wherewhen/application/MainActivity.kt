@@ -27,22 +27,22 @@ import software.ulpgc.wherewhen.presentation.auth.register.RegisterScreen
 import software.ulpgc.wherewhen.presentation.auth.register.JetpackComposeRegisterViewModel
 import software.ulpgc.wherewhen.presentation.auth.register.RegisterViewModelFactory
 import software.ulpgc.wherewhen.presentation.main.MainScreen
-import software.ulpgc.wherewhen.presentation.social.JetpackComposeSocialViewModel
-import software.ulpgc.wherewhen.presentation.social.SocialViewModelFactory
+import software.ulpgc.wherewhen.presentation.social.list.JetpackComposeSocialViewModel
+import software.ulpgc.wherewhen.presentation.social.list.SocialViewModelFactory
 import software.ulpgc.wherewhen.presentation.profile.JetpackComposeProfileViewModel
 import software.ulpgc.wherewhen.presentation.profile.ProfileViewModelFactory
-import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatViewModel
-import software.ulpgc.wherewhen.presentation.chat.JetpackComposeChatsViewModel
-import software.ulpgc.wherewhen.presentation.chat.ChatViewModelFactory
-import software.ulpgc.wherewhen.presentation.chat.ChatsViewModelFactory
+import software.ulpgc.wherewhen.presentation.chat.individual.JetpackComposeChatViewModel
+import software.ulpgc.wherewhen.presentation.chat.list.JetpackComposeChatsViewModel
+import software.ulpgc.wherewhen.presentation.chat.individual.ChatViewModelFactory
+import software.ulpgc.wherewhen.presentation.chat.list.ChatsViewModelFactory
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventDetailViewModel
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
+import software.ulpgc.wherewhen.presentation.events.individual.JetpackComposeEventDetailViewModel
+import software.ulpgc.wherewhen.presentation.events.form.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.events.EventsViewModelFactory
-import software.ulpgc.wherewhen.presentation.events.EventDetailViewModelFactory
-import software.ulpgc.wherewhen.presentation.events.CreateEventViewModelFactory
-import software.ulpgc.wherewhen.presentation.social.JetpackComposeUserProfileViewModel
-import software.ulpgc.wherewhen.presentation.social.UserProfileViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.individual.EventDetailViewModelFactory
+import software.ulpgc.wherewhen.presentation.events.form.CreateEventViewModelFactory
+import software.ulpgc.wherewhen.presentation.social.individual.JetpackComposeUserProfileViewModel
+import software.ulpgc.wherewhen.presentation.social.individual.UserProfileViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -217,7 +217,10 @@ class MainActivity : ComponentActivity() {
                         appContainer.joinEventUseCase,
                         appContainer.leaveEventUseCase,
                         appContainer.getEventAttendeesUseCase,
-                        appContainer.deleteUserEventUseCase
+                        appContainer.deleteUserEventUseCase,
+                        appContainer.updateUserEventStatusUseCase,
+                        appContainer.getUserUseCase,
+                        appContainer.locationService
                     )
                 )
 

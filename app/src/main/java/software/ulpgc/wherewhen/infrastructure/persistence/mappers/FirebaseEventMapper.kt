@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 object FirebaseEventMapper {
-    
+
     fun fromFirestore(snapshot: DocumentSnapshot): Event? {
         return try {
             Event(
@@ -27,7 +27,9 @@ object FirebaseEventMapper {
                 endDateTime = snapshot.getString("endDateTime")?.let { LocalDateTime.parse(it) },
                 imageUrl = snapshot.getString("imageUrl"),
                 source = EventSource.valueOf(snapshot.getString("source") ?: "USER_CREATED"),
-                organizerId = snapshot.getString("organizerId")?.let { UUID.parse(it).getOrNull() },
+                organizerId = snapshot.getString("organizerId")?.let {
+                    UUID.parse(it).getOrNull()
+                },
                 externalId = snapshot.getString("externalId"),
                 externalUrl = snapshot.getString("externalUrl"),
                 price = if (snapshot.getBoolean("isFree") == true) {
@@ -46,13 +48,14 @@ object FirebaseEventMapper {
                 status = EventStatus.valueOf(snapshot.getString("status") ?: "ACTIVE"),
                 createdAt = LocalDateTime.parse(
                     snapshot.getString("createdAt") ?: LocalDateTime.now().toString()
-                )
+                ),
+                maxAttendees = snapshot.getLong("maxAttendees")?.toInt()
             )
         } catch (e: Exception) {
             null
         }
     }
-    
+
     fun toFirestore(event: Event): Map<String, Any?> {
         return mapOf(
             "id" to event.id.value,
@@ -79,7 +82,7 @@ object FirebaseEventMapper {
             "distance" to event.distance,
             "status" to event.status.name,
             "createdAt" to event.createdAt.format(DateTimeFormatter.ISO_DATE_TIME),
-            "currentAttendees" to 0
+            "maxAttendees" to event.maxAttendees
         )
     }
 }
