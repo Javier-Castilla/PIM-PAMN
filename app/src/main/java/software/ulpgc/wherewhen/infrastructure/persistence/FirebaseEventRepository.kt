@@ -9,6 +9,7 @@ import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.model.events.AttendanceStatus
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventSource
+import software.ulpgc.wherewhen.domain.model.events.Location
 import software.ulpgc.wherewhen.domain.ports.persistence.UserEventRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.infrastructure.persistence.mappers.FirebaseEventMapper
@@ -114,14 +115,13 @@ class FirebaseEventRepository : UserEventRepository {
                 .mapNotNull { event ->
                     val lat = event.location.latitude
                     val lon = event.location.longitude
-                    if (lat == null || lon == null) return@mapNotNull null
                     val distance = calculateDistance(
                         latitude,
                         longitude,
                         lat,
                         lon
                     )
-                    if (distance <= radiusKm) {
+                    if (event.isNearby(Location.of(latitude, longitude), radiusKm)) {
                         event.copy(distance = distance)
                     } else {
                         null

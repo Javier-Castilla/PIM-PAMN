@@ -82,10 +82,6 @@ class JetpackComposeEventDetailViewModel(
     private var eventObserverJob: Job? = null
     private var onKnownCancelledCallback: ((UUID) -> Unit)? = null
 
-    fun setOnKnownCancelledCallback(callback: (UUID) -> Unit) {
-        onKnownCancelledCallback = callback
-    }
-
     override fun loadEvent(eventId: UUID) {
         currentEventId = eventId
         eventObserverJob?.cancel()
@@ -100,7 +96,7 @@ class JetpackComposeEventDetailViewModel(
             }
 
             val event = result.getOrNull()!!
-            if (event.source == EventSource.EXTERNAL_API) {
+            if (event.isOfficial()) {
                 val enriched = enrichWithDistance(event)
                 uiState = UiState.Success(
                     event = enriched,
@@ -231,10 +227,6 @@ class JetpackComposeEventDetailViewModel(
 
     fun dismissAttendeesDialog() {
         showAttendeesDialog = false
-    }
-
-    fun openAttendeesAfterReturn() {
-        showAttendeesDialog = true
     }
 
     fun showStatusDialog() {
@@ -376,10 +368,6 @@ class JetpackComposeEventDetailViewModel(
         val userLon = userLocation.longitude
         val lat = event.location.latitude
         val lon = event.location.longitude
-
-        if (userLat == null || userLon == null || lat == null || lon == null) {
-            return event
-        }
 
         val distance = calculateDistance(userLat, userLon, lat, lon)
         return event.copy(distance = distance)

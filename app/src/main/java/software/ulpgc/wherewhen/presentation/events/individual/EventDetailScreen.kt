@@ -663,9 +663,9 @@ private fun EventDetailContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        if (price.isFree) Icons.Default.CheckCircle else Icons.Default.AttachMoney,
+                        if (event.isFree()) Icons.Default.CheckCircle else Icons.Default.AttachMoney,
                         contentDescription = null,
-                        tint = if (price.isFree) {
+                        tint = if (event.isFree()) {
                             androidx.compose.material3.MaterialTheme.colorScheme.tertiary
                         } else {
                             androidx.compose.material3.MaterialTheme.colorScheme.primary
@@ -675,7 +675,7 @@ private fun EventDetailContent(
                     Text(
                         text = price.formatPrice(),
                         style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
-                        color = if (price.isFree) {
+                        color = if (event.isFree()) {
                             androidx.compose.material3.MaterialTheme.colorScheme.tertiary
                         } else {
                             androidx.compose.material3.MaterialTheme.colorScheme.onSurface

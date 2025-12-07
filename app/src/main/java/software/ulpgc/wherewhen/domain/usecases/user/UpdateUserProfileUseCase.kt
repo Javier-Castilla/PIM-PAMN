@@ -1,6 +1,5 @@
 package software.ulpgc.wherewhen.domain.usecases.user
 
-import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 import software.ulpgc.wherewhen.domain.model.user.Profile
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.Email
@@ -17,7 +16,7 @@ class UpdateUserProfileUseCase(
 ) {
     suspend operator fun invoke(uuid: UUID, dto: UpdateUserProfileDTO): Result<Profile> {
         val user = repository.getWith(uuid).mapCatching { it ->
-            it ?: throw UserNotFoundException(uuid)
+            it
         }.getOrElse { error ->
             return Result.failure(error)
         }
