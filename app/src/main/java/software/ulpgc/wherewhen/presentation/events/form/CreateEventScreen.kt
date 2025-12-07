@@ -33,6 +33,9 @@ import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
+import android.app.Activity
+import com.yalantis.ucrop.UCrop
+
 
 @Parcelize
 data class UriWrapper(val uri: Uri) : Parcelable
@@ -48,17 +51,56 @@ fun CreateEventScreen(
     val context = LocalContext.current
     var tempPhotoUri by rememberSaveable { mutableStateOf<UriWrapper?>(null) }
 
+    val cropLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val resultUri = result.data?.let { UCrop.getOutput(it) }
+            resultUri?.let { uri ->
+                viewModel.onImageSelected(uri)
+            }
+        } else if (result.resultCode == UCrop.RESULT_ERROR) {
+            val cropError = result.data?.let { UCrop.getError(it) }
+        }
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onImageSelected(it) }
+        uri?.let { sourceUri ->
+            val destinationUri = Uri.fromFile(
+                File(
+                    context.cacheDir,
+                    "event_cropped_${System.currentTimeMillis()}.jpg"
+                )
+            )
+
+            val uCrop = UCrop.of(sourceUri, destinationUri)
+                .withAspectRatio(1f, 1f)
+                .withMaxResultSize(1000, 1000)
+
+            cropLauncher.launch(uCrop.getIntent(context))
+        }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            tempPhotoUri?.uri?.let { viewModel.onImageSelected(it) }
+            tempPhotoUri?.uri?.let { sourceUri ->
+                val destinationUri = Uri.fromFile(
+                    File(
+                        context.cacheDir,
+                        "event_cropped_${System.currentTimeMillis()}.jpg"
+                    )
+                )
+
+                val uCrop = UCrop.of(sourceUri, destinationUri)
+                    .withAspectRatio(1f, 1f)
+                    .withMaxResultSize(1000, 1000)
+
+                cropLauncher.launch(uCrop.getIntent(context))
+            }
         }
     }
 
@@ -71,11 +113,13 @@ fun CreateEventScreen(
                 ".jpg",
                 context.externalCacheDir
             )
+
             val uri = FileProvider.getUriForFile(
                 context,
                 "software.ulpgc.wherewhen.fileprovider",
                 photoFile
             )
+
             tempPhotoUri = UriWrapper(uri)
             cameraLauncher.launch(uri)
         }

@@ -6,7 +6,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import software.ulpgc.wherewhen.domain.model.events.*
+import software.ulpgc.wherewhen.domain.model.events.AttendanceStatus
+import software.ulpgc.wherewhen.domain.model.events.Event
+import software.ulpgc.wherewhen.domain.model.events.EventSource
 import software.ulpgc.wherewhen.domain.ports.persistence.UserEventRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.infrastructure.persistence.mappers.FirebaseEventMapper
@@ -32,6 +34,19 @@ class FirebaseEventRepository : UserEventRepository {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    fun observeEventById(eventId: UUID): Flow<Event?> = callbackFlow {
+        val listener = eventsCollection.document(eventId.value)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val event = snapshot?.let { FirebaseEventMapper.fromFirestore(it) }
+                trySend(event)
+            }
+        awaitClose { listener.remove() }
     }
 
     override suspend fun createUserEvent(event: Event): Result<Event> {
@@ -96,12 +111,21 @@ class FirebaseEventRepository : UserEventRepository {
                 .await()
                 .documents
                 .mapNotNull { FirebaseEventMapper.fromFirestore(it) }
-                .filter { event ->
+                .mapNotNull { event ->
+                    val lat = event.location.latitude
+                    val lon = event.location.longitude
+                    if (lat == null || lon == null) return@mapNotNull null
                     val distance = calculateDistance(
-                        latitude, longitude,
-                        event.location.latitude, event.location.longitude
+                        latitude,
+                        longitude,
+                        lat,
+                        lon
                     )
-                    distance <= radiusKm
+                    if (distance <= radiusKm) {
+                        event.copy(distance = distance)
+                    } else {
+                        null
+                    }
                 }
             Result.success(events)
         } catch (e: Exception) {
@@ -120,13 +144,11 @@ class FirebaseEventRepository : UserEventRepository {
                 "joinedAt" to LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
             )
             attendanceCollection.document(attendanceId).set(attendanceMap).await()
-
             val eventDoc = eventsCollection.document(eventId.value).get().await()
             val currentAttendees = eventDoc.getLong("currentAttendees")?.toInt() ?: 0
             eventsCollection.document(eventId.value)
                 .update("currentAttendees", currentAttendees + 1)
                 .await()
-
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -137,7 +159,6 @@ class FirebaseEventRepository : UserEventRepository {
         return try {
             val attendanceId = "${eventId.value}_${userId.value}"
             attendanceCollection.document(attendanceId).delete().await()
-
             val eventDoc = eventsCollection.document(eventId.value).get().await()
             val currentAttendees = eventDoc.getLong("currentAttendees")?.toInt() ?: 0
             if (currentAttendees > 0) {
@@ -145,7 +166,6 @@ class FirebaseEventRepository : UserEventRepository {
                     .update("currentAttendees", currentAttendees - 1)
                     .await()
             }
-
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -178,7 +198,6 @@ class FirebaseEventRepository : UserEventRepository {
                 .await()
                 .documents
                 .mapNotNull { it.getString("eventId") }
-
             val events = eventIds.mapNotNull { eventId ->
                 val snapshot = eventsCollection.document(eventId).get().await()
                 FirebaseEventMapper.fromFirestore(snapshot)
@@ -204,8 +223,13 @@ class FirebaseEventRepository : UserEventRepository {
         }
     }
 
-    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val R = 6371.0
+    private fun calculateDistance(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Double {
+        val r = 6371.0
         val lat1Rad = Math.toRadians(lat1)
         val lat2Rad = Math.toRadians(lat2)
         val deltaLat = Math.toRadians(lat2 - lat1)
@@ -214,6 +238,6 @@ class FirebaseEventRepository : UserEventRepository {
                 Math.cos(lat1Rad) * Math.cos(lat2Rad) *
                 Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        return R * c
+        return r * c
     }
 }

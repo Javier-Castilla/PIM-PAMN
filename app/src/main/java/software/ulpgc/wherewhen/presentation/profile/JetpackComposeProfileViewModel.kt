@@ -63,7 +63,11 @@ class JetpackComposeProfileViewModel(
     }
 
     override fun showError(message: String) {
-        uiState = uiState.copy(isLoading = false, errorMessage = message, isUploadingImage = false)
+        uiState = uiState.copy(
+            isLoading = false,
+            errorMessage = message,
+            isUploadingImage = false
+        )
     }
 
     fun loadProfile() {
@@ -130,7 +134,8 @@ class JetpackComposeProfileViewModel(
 
         if (uiState.editName == profile.name &&
             uiState.editDescription == profile.description &&
-            uiState.selectedImageUri == null) {
+            uiState.selectedImageUri == null
+        ) {
             return
         }
 

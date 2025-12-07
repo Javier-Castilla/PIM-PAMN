@@ -39,6 +39,11 @@
         </provider>
 
         <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="fullSensor"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
             android:name=".application.MainActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="true"

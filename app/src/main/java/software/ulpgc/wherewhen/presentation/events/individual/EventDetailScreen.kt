@@ -2,14 +2,42 @@ package software.ulpgc.wherewhen.presentation.events.individual
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.ManageHistory
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOff
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -26,7 +54,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -40,6 +67,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,8 +79,6 @@ import software.ulpgc.wherewhen.domain.model.events.EventStatus
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,8 +137,10 @@ fun EventDetailScreen(
             title = { Text("Change Event Status") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Select the new status for your event:", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-
+                    Text(
+                        "Select the new status for your event:",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                    )
                     val selectableStatuses = listOf(
                         EventStatus.ACTIVE,
                         EventStatus.CANCELLED,
@@ -123,28 +152,31 @@ fun EventDetailScreen(
                         val icon: ImageVector
                         val label: String
                         val color: Color
-
                         when (status) {
                             EventStatus.ACTIVE -> {
                                 icon = Icons.Default.CheckCircle
                                 label = "Active"
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.primary
                             }
+
                             EventStatus.CANCELLED -> {
                                 icon = Icons.Default.Close
                                 label = "Cancelled"
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.error
                             }
+
                             EventStatus.POSTPONED -> {
                                 icon = Icons.Default.Schedule
                                 label = "Postponed"
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.secondary
                             }
+
                             EventStatus.COMPLETED -> {
                                 icon = Icons.Default.Check
                                 label = "Completed"
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
                             }
+
                             else -> {
                                 icon = Icons.Default.Info
                                 label = status.name.lowercase().replaceFirstChar { it.uppercase() }
@@ -176,6 +208,7 @@ fun EventDetailScreen(
                                     contentDescription = null,
                                     tint = color
                                 )
+
                                 Text(
                                     text = label,
                                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
@@ -185,6 +218,7 @@ fun EventDetailScreen(
                                         androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                                     }
                                 )
+
                                 if (uiState.event.status == status) {
                                     Spacer(Modifier.weight(1f))
                                     Text(
@@ -315,6 +349,7 @@ fun EventDetailScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier.padding(top = 4.dp)
@@ -338,6 +373,7 @@ fun EventDetailScreen(
                                                 modifier = Modifier.height(28.dp)
                                             )
                                         }
+
                                         if (attendee.isCurrentUser) {
                                             AssistChip(
                                                 onClick = {},
@@ -356,7 +392,6 @@ fun EventDetailScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -385,6 +420,7 @@ fun EventDetailScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is JetpackComposeEventDetailViewModel.UiState.Success -> {
                 EventDetailContent(
                     event = state.event,
@@ -403,6 +439,7 @@ fun EventDetailScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
             }
+
             is JetpackComposeEventDetailViewModel.UiState.Error -> {
                 Box(
                     modifier = Modifier
@@ -419,6 +456,7 @@ fun EventDetailScreen(
                             style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                             color = androidx.compose.material3.MaterialTheme.colorScheme.error
                         )
+
                         Button(onClick = { viewModel.loadEvent(eventId) }) {
                             Text("Retry")
                         }
@@ -490,24 +528,28 @@ private fun EventDetailContent(
                             containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer
                             labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
                         }
+
                         EventStatus.POSTPONED -> {
                             statusIcon = Icons.Default.Schedule
                             statusLabel = "Postponed"
                             containerColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer
                             labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
                         }
+
                         EventStatus.COMPLETED -> {
                             statusIcon = Icons.Default.Check
                             statusLabel = "Completed"
                             containerColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
                             labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onTertiaryContainer
                         }
+
                         EventStatus.RESCHEDULED -> {
                             statusIcon = Icons.Default.DateRange
                             statusLabel = "Rescheduled"
                             containerColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer
                             labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
                         }
+
                         else -> {
                             statusIcon = Icons.Default.CheckCircle
                             statusLabel = "Active"
@@ -537,6 +579,7 @@ private fun EventDetailContent(
                     contentDescription = null,
                     tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
                 )
+
                 Column {
                     Text(
                         text = event.dateTime.format(
@@ -547,6 +590,7 @@ private fun EventDetailContent(
                         ),
                         style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
                     )
+
                     event.endDateTime?.let { endDate ->
                         Text(
                             text = "Until ${endDate.format(
@@ -571,12 +615,14 @@ private fun EventDetailContent(
                     contentDescription = null,
                     tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
                 )
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = event.location.formatAddress()
                             .takeIf { it.isNotEmpty() } ?: "Location not available",
                         style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
                     )
+
                     event.distance?.let { distance ->
                         Text(
                             text = "${String.format("%.1f", distance)} km away",
@@ -625,6 +671,7 @@ private fun EventDetailContent(
                             androidx.compose.material3.MaterialTheme.colorScheme.primary
                         }
                     )
+
                     Text(
                         text = price.formatPrice(),
                         style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
@@ -647,6 +694,7 @@ private fun EventDetailContent(
                         contentDescription = null,
                         tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
                     )
+
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -656,6 +704,7 @@ private fun EventDetailContent(
                                 text = "$attendeesCount going",
                                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
                             )
+
                             if (attendeesCount > 0) {
                                 FilledTonalButton(
                                     onClick = onShowAttendees,
@@ -678,6 +727,7 @@ private fun EventDetailContent(
                                 }
                             }
                         }
+
                         organizerName?.let { name ->
                             Text(
                                 text = "Organized by $name",
@@ -685,6 +735,7 @@ private fun EventDetailContent(
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+
                         if (isFull && event.maxAttendees != null) {
                             Text(
                                 text = "Event is full (${event.maxAttendees} max)",
@@ -733,6 +784,7 @@ private fun EventDetailContent(
                             contentDescription = null,
                             tint = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
                         )
+
                         Text(
                             text = "Ticketmaster external event",
                             style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
@@ -749,6 +801,7 @@ private fun EventDetailContent(
                         text = "Description",
                         style = androidx.compose.material3.MaterialTheme.typography.titleMedium
                     )
+
                     Text(
                         text = description,
                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
@@ -790,13 +843,14 @@ private fun EventDetailContent(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
-                                    Icons.Default.Edit,
+                                    Icons.Default.Create,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Edit")
                             }
+
                             OutlinedButton(
                                 onClick = onChangeStatus,
                                 modifier = Modifier.weight(1f)
@@ -810,6 +864,7 @@ private fun EventDetailContent(
                                 Text("Status")
                             }
                         }
+
                         OutlinedButton(
                             onClick = onDeleteEvent,
                             modifier = Modifier.fillMaxWidth(),
@@ -827,7 +882,7 @@ private fun EventDetailContent(
                         }
                     }
                 } else {
-                    val canJoin = event.status == EventStatus.ACTIVE && !isFull
+                    val canJoin = (event.status == EventStatus.ACTIVE || event.status == EventStatus.RESCHEDULED) && !isFull
                     val canLeave = isAttending
                     val enabled = !isJoining && (canJoin || canLeave)
 
@@ -864,19 +919,19 @@ private fun EventDetailContent(
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                when {
+                                    isAttending -> "Leave event"
+                                    !canJoin && event.status == EventStatus.CANCELLED -> "Event cancelled"
+                                    !canJoin && event.status == EventStatus.POSTPONED -> "Event postponed"
+                                    !canJoin && event.status == EventStatus.COMPLETED -> "Event completed"
+                                    !canJoin && event.status == EventStatus.RESCHEDULED -> "Event rescheduled"
+                                    isFull -> "Event is full"
+                                    else -> "Join event"
+                                }
+                            )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            when {
-                                isAttending -> "Leave event"
-                                !canJoin && event.status == EventStatus.CANCELLED -> "Event cancelled"
-                                !canJoin && event.status == EventStatus.POSTPONED -> "Event postponed"
-                                !canJoin && event.status == EventStatus.COMPLETED -> "Event completed"
-                                !canJoin && event.status == EventStatus.RESCHEDULED -> "Event rescheduled"
-                                isFull -> "Event is full"
-                                else -> "Join event"
-                            }
-                        )
                     }
                 }
             }

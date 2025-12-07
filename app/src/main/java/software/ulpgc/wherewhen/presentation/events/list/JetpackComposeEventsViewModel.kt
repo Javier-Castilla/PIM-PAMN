@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.exceptions.events.*
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventCategory
+import software.ulpgc.wherewhen.domain.model.events.EventStatus
 import software.ulpgc.wherewhen.domain.model.events.Location
 import software.ulpgc.wherewhen.domain.ports.location.LocationService
 import software.ulpgc.wherewhen.domain.usecases.events.*
@@ -56,6 +57,7 @@ class JetpackComposeEventsViewModel(
 
     override fun onTabSelected(index: Int) {
         selectedTab = index
+        clearSearch()
         when (index) {
             0 -> loadNearbyEvents()
             1 -> loadJoinedEvents()
@@ -65,40 +67,52 @@ class JetpackComposeEventsViewModel(
 
     override fun onSearchQueryChange(query: String) {
         searchQuery = query
-        if (query.isBlank()) {
-            loadNearbyEvents()
-        } else {
-            searchByName(query)
+        when (selectedTab) {
+            0 -> {
+                if (query.isBlank()) {
+                    loadNearbyEvents()
+                } else {
+                    searchByName(query)
+                }
+            }
+            1 -> searchJoinedEvents(query)
+            2 -> searchCreatedEvents(query)
         }
     }
 
     override fun onCategorySelected(category: EventCategory?) {
         selectedCategory = category
-        if (category == null) {
-            if (searchQuery.isBlank()) {
-                loadNearbyEvents()
-            } else {
-                searchByName(searchQuery)
+        when (selectedTab) {
+            0 -> {
+                if (category == null) {
+                    if (searchQuery.isBlank()) {
+                        loadNearbyEvents()
+                    } else {
+                        searchByName(searchQuery)
+                    }
+                } else {
+                    searchByCategory(category)
+                }
             }
-        } else {
-            searchByCategory(category)
+            1 -> loadJoinedEvents()
+            2 -> loadCreatedEvents()
         }
     }
 
     fun onRadiusChange(newRadius: Int) {
         radiusKm = newRadius
-        when {
-            searchQuery.isNotBlank() -> searchByName(searchQuery)
-            selectedCategory != null -> searchByCategory(selectedCategory!!)
-            else -> loadNearbyEvents()
+        if (selectedTab == 0) {
+            when {
+                searchQuery.isNotBlank() -> searchByName(searchQuery)
+                selectedCategory != null -> searchByCategory(selectedCategory!!)
+                else -> loadNearbyEvents()
+            }
         }
     }
 
     override fun onRefresh() {
         when (selectedTab) {
-            0 -> {
-                loadLocation()
-            }
+            0 -> loadLocation()
             1 -> loadJoinedEvents()
             2 -> loadCreatedEvents()
         }
@@ -106,23 +120,24 @@ class JetpackComposeEventsViewModel(
 
     override fun loadNearbyEvents() {
         val location = currentLocation
-        println("CURRENT LOCATION: ${location?.latitude}, ${location?.longitude} - ${location?.address}")
         if (location == null) {
             uiState = UiState.Error("Location could not be obtained")
             return
         }
-
         viewModelScope.launch {
             uiState = UiState.Loading
             searchNearbyEventsUseCase(location, radiusKm).fold(
                 onSuccess = { events ->
-                    println("✅ EVENTS FOUND: ${events.size}")
-                    events.forEach { println("   - ${it.title} (${it.source})") }
-                    uiState = UiState.Success(events)
+                    val filteredEvents = events.filter {
+                        it.status == EventStatus.ACTIVE || it.status == EventStatus.RESCHEDULED
+                    }
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
                 },
                 onFailure = { exception ->
-                    println("❌ ERROR: ${exception.message}")
-                    exception.printStackTrace()
                     uiState = UiState.Error(handleException(exception))
                 }
             )
@@ -139,11 +154,15 @@ class JetpackComposeEventsViewModel(
                 uiState = UiState.Error("User not authenticated")
                 return@launch
             }
-
             uiState = UiState.Loading
             getUserJoinedEventsUseCase(userId).fold(
                 onSuccess = { events ->
-                    uiState = UiState.Success(events)
+                    val filteredEvents = filterEventsBySearchAndCategory(events)
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
                 },
                 onFailure = { exception ->
                     uiState = UiState.Error(handleException(exception))
@@ -158,11 +177,15 @@ class JetpackComposeEventsViewModel(
                 uiState = UiState.Error("User not authenticated")
                 return@launch
             }
-
             uiState = UiState.Loading
             getUserCreatedEventsUseCase(userId).fold(
                 onSuccess = { events ->
-                    uiState = UiState.Success(events)
+                    val filteredEvents = filterEventsBySearchAndCategory(events)
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
                 },
                 onFailure = { exception ->
                     uiState = UiState.Error(handleException(exception))
@@ -171,10 +194,74 @@ class JetpackComposeEventsViewModel(
         }
     }
 
+    private fun searchJoinedEvents(query: String) {
+        viewModelScope.launch {
+            val userId = getCurrentUserId() ?: run {
+                uiState = UiState.Error("User not authenticated")
+                return@launch
+            }
+            uiState = UiState.Loading
+            getUserJoinedEventsUseCase(userId).fold(
+                onSuccess = { events ->
+                    val filteredEvents = filterEventsBySearchAndCategory(events)
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
+                },
+                onFailure = { exception ->
+                    uiState = UiState.Error(handleException(exception))
+                }
+            )
+        }
+    }
+
+    private fun searchCreatedEvents(query: String) {
+        viewModelScope.launch {
+            val userId = getCurrentUserId() ?: run {
+                uiState = UiState.Error("User not authenticated")
+                return@launch
+            }
+            uiState = UiState.Loading
+            getUserCreatedEventsUseCase(userId).fold(
+                onSuccess = { events ->
+                    val filteredEvents = filterEventsBySearchAndCategory(events)
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
+                },
+                onFailure = { exception ->
+                    uiState = UiState.Error(handleException(exception))
+                }
+            )
+        }
+    }
+
+    private fun filterEventsBySearchAndCategory(events: List<Event>): List<Event> {
+        var filtered = events
+        if (searchQuery.isNotBlank()) {
+            filtered = filtered.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                        it.description?.contains(searchQuery, ignoreCase = true) == true
+            }
+        }
+        if (selectedCategory != null) {
+            filtered = filtered.filter { it.category == selectedCategory }
+        }
+        return filtered
+    }
+
     override fun clearSearch() {
         searchQuery = ""
         selectedCategory = null
-        loadNearbyEvents()
+        when (selectedTab) {
+            0 -> loadNearbyEvents()
+            1 -> loadJoinedEvents()
+            2 -> loadCreatedEvents()
+        }
     }
 
     private fun searchByName(query: String) {
@@ -183,7 +270,14 @@ class JetpackComposeEventsViewModel(
             uiState = UiState.Loading
             searchEventsByNameUseCase(location, query, radiusKm).fold(
                 onSuccess = { events ->
-                    uiState = UiState.Success(events)
+                    val filteredEvents = events.filter {
+                        it.status == EventStatus.ACTIVE || it.status == EventStatus.RESCHEDULED
+                    }
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
                 },
                 onFailure = { exception ->
                     uiState = UiState.Error(handleException(exception))
@@ -198,7 +292,14 @@ class JetpackComposeEventsViewModel(
             uiState = UiState.Loading
             searchEventsByCategoryUseCase(location, category, radiusKm).fold(
                 onSuccess = { events ->
-                    uiState = UiState.Success(events)
+                    val filteredEvents = events.filter {
+                        it.status == EventStatus.ACTIVE || it.status == EventStatus.RESCHEDULED
+                    }
+                    val sorted = filteredEvents.sortedWith(
+                        compareBy<Event> { it.dateTime }
+                            .thenBy { it.distance ?: Double.MAX_VALUE }
+                    )
+                    uiState = UiState.Success(sorted)
                 },
                 onFailure = { exception ->
                     uiState = UiState.Error(handleException(exception))
@@ -217,7 +318,14 @@ class JetpackComposeEventsViewModel(
                     }
                 },
                 onFailure = {
-                    currentLocation = Location(28.1235, -15.4363, "Las Palmas de Gran Canaria, Spain", null, null, null)
+                    currentLocation = Location(
+                        28.1235,
+                        -15.4363,
+                        "Las Palmas de Gran Canaria, Spain",
+                        null,
+                        null,
+                        null
+                    )
                     if (selectedTab == 0) {
                         loadNearbyEvents()
                     }
@@ -237,6 +345,14 @@ class JetpackComposeEventsViewModel(
             is LocationUnavailableException -> "Location could not be obtained"
             is EventNotFoundException -> "Event not found"
             else -> "Error loading events: ${exception.message}"
+        }
+    }
+
+    fun removeEventFromCurrentList(eventId: UUID) {
+        val currentState = uiState
+        if (currentState is UiState.Success) {
+            val updated = currentState.events.filter { it.id != eventId }
+            uiState = UiState.Success(updated)
         }
     }
 }

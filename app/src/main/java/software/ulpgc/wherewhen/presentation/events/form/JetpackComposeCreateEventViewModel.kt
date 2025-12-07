@@ -1,11 +1,7 @@
 package software.ulpgc.wherewhen.presentation.events.form
 
 import android.app.Application
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,8 +21,6 @@ import software.ulpgc.wherewhen.domain.usecases.events.GetEventByIdUseCase
 import software.ulpgc.wherewhen.domain.usecases.events.UpdateUserEventUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.viewModels.CreateEventViewModel
-import java.io.File
-import java.io.FileOutputStream
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -241,30 +235,6 @@ class JetpackComposeCreateEventViewModel(
         checkForChanges()
     }
 
-    private fun compressImage(context: Context, uri: Uri): File? {
-        return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            val compressedFile = File.createTempFile(
-                "compressed_",
-                ".jpg",
-                context.cacheDir
-            )
-
-            val outputStream = FileOutputStream(compressedFile)
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-            outputStream.close()
-            bitmap.recycle()
-
-            compressedFile
-        } catch (e: Exception) {
-            Log.e("CreateEventViewModel", "Error compressing image", e)
-            null
-        }
-    }
-
     fun onIsFreeEventChange(value: Boolean) {
         isFreeEvent = value
         if (value) {
@@ -313,19 +283,24 @@ class JetpackComposeCreateEventViewModel(
         }
 
         val original = originalEvent ?: return
-        hasUnsavedChanges = title != original.title ||
-                description != (original.description ?: "") ||
-                selectedCategory != original.category ||
-                selectedDate != original.dateTime.toLocalDate() ||
-                selectedTime != original.dateTime.toLocalTime() ||
-                selectedEndDate != original.endDateTime?.toLocalDate() ||
-                selectedEndTime != original.endDateTime?.toLocalTime() ||
-                maxAttendees != (original.maxAttendees?.toString() ?: "") ||
-                locationAddress != (original.location.address ?: "") ||
-                imageUrl != (original.imageUrl ?: "") ||
-                selectedImageUri != null ||
-                isFreeEvent != (original.price?.isFree ?: true) ||
-                priceAmount != (if (original.price?.isFree == false) original.price?.min?.toString() ?: "" else "")
+        hasUnsavedChanges =
+            title != original.title ||
+                    description != (original.description ?: "") ||
+                    selectedCategory != original.category ||
+                    selectedDate != original.dateTime.toLocalDate() ||
+                    selectedTime != original.dateTime.toLocalTime() ||
+                    selectedEndDate != original.endDateTime?.toLocalDate() ||
+                    selectedEndTime != original.endDateTime?.toLocalTime() ||
+                    maxAttendees != (original.maxAttendees?.toString() ?: "") ||
+                    locationAddress != (original.location.address ?: "") ||
+                    imageUrl != (original.imageUrl ?: "") ||
+                    selectedImageUri != null ||
+                    isFreeEvent != (original.price?.isFree ?: true) ||
+                    priceAmount != (
+                    if (original.price?.isFree == false)
+                        original.price?.min?.toString() ?: ""
+                    else ""
+                    )
     }
 
     private fun loadCurrentLocation() {
@@ -368,14 +343,7 @@ class JetpackComposeCreateEventViewModel(
 
             val uploadedImageUrl = if (selectedImageUri != null) {
                 isUploadingImage = true
-                val compressedFile = compressImage(getApplication(), selectedImageUri!!)
-                val uriToUpload = if (compressedFile != null) {
-                    Uri.fromFile(compressedFile)
-                } else {
-                    selectedImageUri!!
-                }
-
-                imageUploadService.uploadImage(uriToUpload).getOrElse { error ->
+                imageUploadService.uploadImage(selectedImageUri!!).getOrElse { error ->
                     isUploadingImage = false
                     uiState = UiState.Error("Failed to upload image: ${error.message}")
                     return@launch

@@ -1,6 +1,7 @@
 package software.ulpgc.wherewhen.infrastructure.persistence.cached
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventCategory
 import software.ulpgc.wherewhen.domain.model.events.Location
@@ -10,6 +11,7 @@ import software.ulpgc.wherewhen.domain.valueObjects.UUID
 class CachedEventRepository(
     private val decorated: ExternalEventRepository
 ) : ExternalEventRepository {
+
     private val eventCache = mutableMapOf<String, Event>()
 
     override suspend fun searchNearbyEvents(
@@ -71,13 +73,11 @@ class CachedEventRepository(
     }
 
     override suspend fun getEventById(eventId: UUID): Result<Event> {
-        val cachedEvent = eventCache[eventId.value]
-        return if (cachedEvent != null) {
-            Result.success(cachedEvent)
-        } else {
-            decorated.getEventById(eventId).onSuccess { event ->
-                eventCache[event.id.value] = event
-            }
+        eventCache[eventId.value]?.let { cached ->
+            return Result.success(cached)
+        }
+        return decorated.getEventById(eventId).onSuccess { event ->
+            eventCache[event.id.value] = event
         }
     }
 
@@ -103,12 +103,26 @@ class CachedEventRepository(
         return decorated.observeUserEvents(organizerId)
     }
 
+    override fun observeEventById(eventId: UUID): Flow<Event?> {
+        return decorated.observeEventById(eventId).onEach { event ->
+            if (event != null) {
+                eventCache[event.id.value] = event
+            } else {
+                eventCache.remove(eventId.value)
+            }
+        }
+    }
+
     override suspend fun joinEvent(eventId: UUID, userId: UUID): Result<Unit> {
-        return decorated.joinEvent(eventId, userId)
+        return decorated.joinEvent(eventId, userId).onSuccess {
+            eventCache.remove(eventId.value)
+        }
     }
 
     override suspend fun leaveEvent(eventId: UUID, userId: UUID): Result<Unit> {
-        return decorated.leaveEvent(eventId, userId)
+        return decorated.leaveEvent(eventId, userId).onSuccess {
+            eventCache.remove(eventId.value)
+        }
     }
 
     override suspend fun getEventAttendees(eventId: UUID): Result<List<UUID>> {

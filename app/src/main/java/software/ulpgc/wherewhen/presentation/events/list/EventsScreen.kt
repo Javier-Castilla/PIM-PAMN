@@ -30,16 +30,13 @@ fun EventsScreen(
     onCreateEventClick: () -> Unit
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Events") },
                 actions = {
-                    if (viewModel.selectedTab == 0) {
-                        IconButton(onClick = { showFilterSheet = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search & Filter")
-                        }
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Icon(Icons.Default.Search, contentDescription = "Search & Filter")
                     }
                     IconButton(onClick = { viewModel.onRefresh() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -85,7 +82,6 @@ fun EventsScreen(
                         CircularProgressIndicator()
                     }
                 }
-
                 is JetpackComposeEventsViewModel.UiState.Success -> {
                     if (state.events.isEmpty()) {
                         Box(
@@ -110,7 +106,6 @@ fun EventsScreen(
                         )
                     }
                 }
-
                 is JetpackComposeEventsViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -131,26 +126,26 @@ fun EventsScreen(
                         }
                     }
                 }
-
                 is JetpackComposeEventsViewModel.UiState.Idle -> {}
             }
         }
-    }
 
-    if (showFilterSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showFilterSheet = false }
-        ) {
-            FilterContent(
-                searchQuery = viewModel.searchQuery,
-                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                onClearSearch = { viewModel.clearSearch() },
-                radiusKm = viewModel.radiusKm,
-                onRadiusChange = { viewModel.onRadiusChange(it) },
-                selectedCategory = viewModel.selectedCategory,
-                onCategorySelected = { viewModel.onCategorySelected(it) },
-                onClose = { showFilterSheet = false }
-            )
+        if (showFilterSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showFilterSheet = false }
+            ) {
+                FilterContent(
+                    searchQuery = viewModel.searchQuery,
+                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                    onClearSearch = { viewModel.clearSearch() },
+                    radiusKm = viewModel.radiusKm,
+                    onRadiusChange = { viewModel.onRadiusChange(it) },
+                    selectedCategory = viewModel.selectedCategory,
+                    onCategorySelected = { viewModel.onCategorySelected(it) },
+                    onClose = { showFilterSheet = false },
+                    showRadiusFilter = viewModel.selectedTab == 0
+                )
+            }
         }
     }
 }
@@ -164,7 +159,8 @@ private fun FilterContent(
     onRadiusChange: (Int) -> Unit,
     selectedCategory: EventCategory?,
     onCategorySelected: (EventCategory?) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    showRadiusFilter: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -194,36 +190,34 @@ private fun FilterContent(
             singleLine = true
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Search Radius",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (showRadiusFilter) {
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "$radiusKm km",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary
+                text = "Search Radius",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$radiusKm km",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Slider(
+                value = radiusKm.toFloat(),
+                onValueChange = { onRadiusChange(it.toInt()) },
+                valueRange = 5f..100f,
+                steps = 18,
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
-        Slider(
-            value = radiusKm.toFloat(),
-            onValueChange = { onRadiusChange(it.toInt()) },
-            valueRange = 5f..100f,
-            steps = 18,
-            modifier = Modifier.fillMaxWidth()
-        )
-
         Spacer(modifier = Modifier.height(16.dp))
-
         Text(
             text = "Category",
             style = MaterialTheme.typography.titleMedium,
@@ -240,7 +234,6 @@ private fun FilterContent(
                     label = { Text("All") }
                 )
             }
-
             items(EventCategory.values()) { category ->
                 FilterChip(
                     selected = selectedCategory == category,
@@ -251,14 +244,12 @@ private fun FilterContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
         Button(
             onClick = onClose,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Apply")
         }
-
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -282,7 +273,6 @@ private fun EventsList(
     }
 }
 
-
 @Composable
 private fun EventCard(
     event: Event,
@@ -305,7 +295,6 @@ private fun EventCard(
                     contentScale = ContentScale.Crop
                 )
             }
-
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -317,9 +306,7 @@ private fun EventCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -339,9 +326,7 @@ private fun EventCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)

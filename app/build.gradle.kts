@@ -116,6 +116,10 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation("io.mockk:mockk-android:1.13.8")
 
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
+    implementation("com.github.yalantis:ucrop:2.2.10")
+
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

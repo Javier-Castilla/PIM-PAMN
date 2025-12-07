@@ -219,7 +219,8 @@ class MainActivity : ComponentActivity() {
                         appContainer.getEventAttendeesUseCase,
                         appContainer.deleteUserEventUseCase,
                         appContainer.updateUserEventStatusUseCase,
-                        appContainer.getUserUseCase
+                        appContainer.getUserUseCase,
+                        appContainer.locationService
                     )
                 )
 
