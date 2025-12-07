@@ -1,4 +1,4 @@
-package software.ulpgc.wherewhen.presentation.events
+package software.ulpgc.wherewhen.presentation.events.form
 
 import android.app.Application
 import androidx.lifecycle.ViewModel

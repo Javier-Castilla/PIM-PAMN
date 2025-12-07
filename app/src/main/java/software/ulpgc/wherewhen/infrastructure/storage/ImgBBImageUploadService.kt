@@ -13,6 +13,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import software.ulpgc.wherewhen.domain.ports.storage.ImageUploadService
+import software.ulpgc.wherewhen.presentation.common.normalizeImageUriToJpegBytes
 import java.io.ByteArrayOutputStream
 
 class ImgBBImageUploadService(
@@ -55,11 +56,13 @@ class ImgBBImageUploadService(
     }
 
     private fun convertImageToBase64(imageUri: Uri): String {
-        val inputStream = context.contentResolver.openInputStream(imageUri)
-            ?: throw IllegalArgumentException("Cannot open image URI")
+        val normalizedBytes = context.normalizeImageUriToJpegBytes(imageUri, quality = 80)
+        if (normalizedBytes.isEmpty()) {
+            throw IllegalArgumentException("Cannot read image bytes")
+        }
 
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream.close()
+        val bitmap = BitmapFactory.decodeByteArray(normalizedBytes, 0, normalizedBytes.size)
+            ?: throw IllegalArgumentException("Cannot decode image bytes")
 
         val scaledBitmap = if (bitmap.width > 1920 || bitmap.height > 1920) {
             val ratio = minOf(1920f / bitmap.width, 1920f / bitmap.height)

@@ -26,18 +26,21 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,9 +51,9 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -64,12 +67,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import software.ulpgc.wherewhen.domain.model.events.Event
 import software.ulpgc.wherewhen.domain.model.events.EventSource
+import software.ulpgc.wherewhen.domain.model.events.EventStatus
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -101,9 +107,7 @@ fun EventDetailScreen(
             onDismissRequest = { viewModel.dismissDeleteDialog() },
             title = { Text("Delete event") },
             text = {
-                Text(
-                    "Are you sure you want to delete this event? This action cannot be undone."
-                )
+                Text("Are you sure you want to delete this event? This action cannot be undone.")
             },
             confirmButton = {
                 TextButton(
@@ -114,7 +118,7 @@ fun EventDetailScreen(
                         }
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = androidx.compose.material3.MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -126,6 +130,116 @@ fun EventDetailScreen(
     }
 
     val uiState = viewModel.uiState
+
+    if (uiState is JetpackComposeEventDetailViewModel.UiState.Success && viewModel.showStatusDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissStatusDialog() },
+            title = { Text("Change Event Status") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Select the new status for your event:",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                    )
+                    val selectableStatuses = listOf(
+                        EventStatus.ACTIVE,
+                        EventStatus.CANCELLED,
+                        EventStatus.POSTPONED,
+                        EventStatus.COMPLETED
+                    )
+
+                    selectableStatuses.forEach { status ->
+                        val icon: ImageVector
+                        val label: String
+                        val color: Color
+                        when (status) {
+                            EventStatus.ACTIVE -> {
+                                icon = Icons.Default.CheckCircle
+                                label = "Active"
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                            }
+
+                            EventStatus.CANCELLED -> {
+                                icon = Icons.Default.Close
+                                label = "Cancelled"
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.error
+                            }
+
+                            EventStatus.POSTPONED -> {
+                                icon = Icons.Default.Schedule
+                                label = "Postponed"
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.secondary
+                            }
+
+                            EventStatus.COMPLETED -> {
+                                icon = Icons.Default.Check
+                                label = "Completed"
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+                            }
+
+                            else -> {
+                                icon = Icons.Default.Info
+                                label = status.name.lowercase().replaceFirstChar { it.uppercase() }
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                            }
+                        }
+
+                        OutlinedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.onUpdateStatus(status)
+                                },
+                            border = if (uiState.event.status == status) {
+                                CardDefaults.outlinedCardBorder().copy(width = 2.dp)
+                            } else {
+                                CardDefaults.outlinedCardBorder()
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    icon,
+                                    contentDescription = null,
+                                    tint = color
+                                )
+
+                                Text(
+                                    text = label,
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                                    color = if (uiState.event.status == status) {
+                                        androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                    } else {
+                                        androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+
+                                if (uiState.event.status == status) {
+                                    Spacer(Modifier.weight(1f))
+                                    Text(
+                                        "Current",
+                                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                                        color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissStatusDialog() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (uiState is JetpackComposeEventDetailViewModel.UiState.Success &&
         viewModel.showAttendeesDialog
@@ -148,12 +262,12 @@ fun EventDetailScreen(
                     Column {
                         Text(
                             text = "Attendees",
-                            style = MaterialTheme.typography.headlineSmall
+                            style = androidx.compose.material3.MaterialTheme.typography.headlineSmall
                         )
                         Text(
                             text = "${uiState.attendees.size} ${if (uiState.attendees.size == 1) "person" else "people"} going",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = { viewModel.dismissAttendeesDialog() }) {
@@ -176,12 +290,12 @@ fun EventDetailScreen(
                                 Icons.Default.PersonOff,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "No attendees yet",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -208,22 +322,22 @@ fun EventDetailScreen(
                                         contentDescription = "Profile picture",
                                         modifier = Modifier
                                             .size(48.dp)
-                                            .clip(MaterialTheme.shapes.medium),
+                                            .clip(androidx.compose.material3.MaterialTheme.shapes.medium),
                                         contentScale = ContentScale.Crop
                                     )
                                 } else {
                                     Box(
                                         modifier = Modifier
                                             .size(48.dp)
-                                            .clip(MaterialTheme.shapes.medium)
-                                            .background(MaterialTheme.colorScheme.primaryContainer),
+                                            .clip(androidx.compose.material3.MaterialTheme.shapes.medium)
+                                            .background(androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             Icons.Default.Person,
                                             contentDescription = null,
                                             modifier = Modifier.size(24.dp),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                     }
                                 }
@@ -231,10 +345,11 @@ fun EventDetailScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = attendee.name,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier.padding(top = 4.dp)
@@ -245,7 +360,7 @@ fun EventDetailScreen(
                                                 label = {
                                                     Text(
                                                         "Organizer",
-                                                        style = MaterialTheme.typography.labelSmall
+                                                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall
                                                     )
                                                 },
                                                 leadingIcon = {
@@ -258,13 +373,14 @@ fun EventDetailScreen(
                                                 modifier = Modifier.height(28.dp)
                                             )
                                         }
+
                                         if (attendee.isCurrentUser) {
                                             AssistChip(
                                                 onClick = {},
                                                 label = {
                                                     Text(
                                                         "You",
-                                                        style = MaterialTheme.typography.labelSmall
+                                                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall
                                                     )
                                                 },
                                                 modifier = Modifier.height(28.dp)
@@ -276,8 +392,6 @@ fun EventDetailScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -320,6 +434,7 @@ fun EventDetailScreen(
                     onLeaveEvent = { viewModel.onLeaveEvent() },
                     onEditEvent = { onEditEvent(state.event.id) },
                     onDeleteEvent = { viewModel.showDeleteConfirmation() },
+                    onChangeStatus = { viewModel.showStatusDialog() },
                     onShowAttendees = { viewModel.openAttendeesDialog() },
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -338,9 +453,10 @@ fun EventDetailScreen(
                     ) {
                         Text(
                             text = state.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.error
                         )
+
                         Button(onClick = { viewModel.loadEvent(eventId) }) {
                             Text("Retry")
                         }
@@ -364,6 +480,7 @@ private fun EventDetailContent(
     onLeaveEvent: () -> Unit,
     onEditEvent: () -> Unit,
     onDeleteEvent: () -> Unit,
+    onChangeStatus: () -> Unit,
     onShowAttendees: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -387,10 +504,71 @@ private fun EventDetailContent(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = event.title,
+                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (event.status != EventStatus.ACTIVE) {
+                    val statusIcon: ImageVector
+                    val statusLabel: String
+                    val containerColor: Color
+                    val labelColor: Color
+
+                    when (event.status) {
+                        EventStatus.CANCELLED -> {
+                            statusIcon = Icons.Default.Close
+                            statusLabel = "Cancelled"
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer
+                            labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                        }
+
+                        EventStatus.POSTPONED -> {
+                            statusIcon = Icons.Default.Schedule
+                            statusLabel = "Postponed"
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer
+                            labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
+                        }
+
+                        EventStatus.COMPLETED -> {
+                            statusIcon = Icons.Default.Check
+                            statusLabel = "Completed"
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+                            labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onTertiaryContainer
+                        }
+
+                        EventStatus.RESCHEDULED -> {
+                            statusIcon = Icons.Default.DateRange
+                            statusLabel = "Rescheduled"
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer
+                            labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
+                        }
+
+                        else -> {
+                            statusIcon = Icons.Default.CheckCircle
+                            statusLabel = "Active"
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+                            labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
+                        }
+                    }
+
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(statusLabel) },
+                        leadingIcon = { Icon(statusIcon, contentDescription = null) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = containerColor,
+                            labelColor = labelColor
+                        )
+                    )
+                }
+            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -399,17 +577,33 @@ private fun EventDetailContent(
                 Icon(
                     Icons.Default.DateRange,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = event.dateTime.format(
-                        DateTimeFormatter.ofPattern(
-                            "EEEE, dd MMMM yyyy 'at' HH:mm",
-                            Locale.ENGLISH
+
+                Column {
+                    Text(
+                        text = event.dateTime.format(
+                            DateTimeFormatter.ofPattern(
+                                "EEEE, dd MMMM yyyy 'at' HH:mm",
+                                Locale.ENGLISH
+                            )
+                        ),
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+                    )
+
+                    event.endDateTime?.let { endDate ->
+                        Text(
+                            text = "Until ${endDate.format(
+                                DateTimeFormatter.ofPattern(
+                                    "dd MMM yyyy 'at' HH:mm",
+                                    Locale.ENGLISH
+                                )
+                            )}",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    ),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                    }
+                }
             }
 
             Row(
@@ -419,13 +613,24 @@ private fun EventDetailContent(
                 Icon(
                     Icons.Default.LocationOn,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = event.location.formatAddress()
-                        .takeIf { it.isNotEmpty() } ?: "Location not available",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = event.location.formatAddress()
+                            .takeIf { it.isNotEmpty() } ?: "Location not available",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+                    )
+
+                    event.distance?.let { distance ->
+                        Text(
+                            text = "${String.format("%.1f", distance)} km away",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             if (event.location.latitude != null && event.location.longitude != null) {
@@ -458,21 +663,22 @@ private fun EventDetailContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        if (price.isFree) Icons.Default.CheckCircle else Icons.Default.AttachMoney,
+                        if (event.isFree()) Icons.Default.CheckCircle else Icons.Default.AttachMoney,
                         contentDescription = null,
-                        tint = if (price.isFree) {
-                            MaterialTheme.colorScheme.tertiary
+                        tint = if (event.isFree()) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.tertiary
                         } else {
-                            MaterialTheme.colorScheme.primary
+                            androidx.compose.material3.MaterialTheme.colorScheme.primary
                         }
                     )
+
                     Text(
                         text = price.formatPrice(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (price.isFree) {
-                            MaterialTheme.colorScheme.tertiary
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                        color = if (event.isFree()) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.tertiary
                         } else {
-                            MaterialTheme.colorScheme.onSurface
+                            androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                         }
                     )
                 }
@@ -486,8 +692,9 @@ private fun EventDetailContent(
                     Icon(
                         Icons.Default.Person,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
                     )
+
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -495,8 +702,9 @@ private fun EventDetailContent(
                         ) {
                             Text(
                                 text = "$attendeesCount going",
-                                style = MaterialTheme.typography.bodyLarge
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
                             )
+
                             if (attendeesCount > 0) {
                                 FilledTonalButton(
                                     onClick = onShowAttendees,
@@ -514,7 +722,7 @@ private fun EventDetailContent(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         "View",
-                                        style = MaterialTheme.typography.labelMedium
+                                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium
                                     )
                                 }
                             }
@@ -523,34 +731,47 @@ private fun EventDetailContent(
                         organizerName?.let { name ->
                             Text(
                                 text = "Organized by $name",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
                         if (isFull && event.maxAttendees != null) {
                             Text(
                                 text = "Event is full (${event.maxAttendees} max)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.error
                             )
                         }
                     }
                 }
             }
 
-            AssistChip(
-                onClick = {},
-                label = { Text(event.category.name) },
-                leadingIcon = {
-                    Icon(Icons.Default.Star, contentDescription = null)
-                }
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AssistChip(
+                    onClick = {},
+                    label = { Text(event.category.name) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Star, contentDescription = null)
+                    }
+                )
+
+                Text(
+                    text = "Created ${event.createdAt.format(
+                        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+                    )}",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+            }
 
             if (event.source == EventSource.EXTERNAL_API) {
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer
                     )
                 ) {
                     Row(
@@ -561,28 +782,29 @@ private fun EventDetailContent(
                         Icon(
                             Icons.Default.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
                         )
+
                         Text(
                             text = "Ticketmaster external event",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
             }
 
-            HorizontalDivider()
-
             event.description?.let { description ->
+                HorizontalDivider()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Description",
-                        style = MaterialTheme.typography.titleMedium
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium
                     )
+
                     Text(
                         text = description,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -611,27 +833,43 @@ private fun EventDetailContent(
 
             if (event.source == EventSource.USER_CREATED) {
                 if (isOrganizer) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onEditEvent,
-                            modifier = Modifier.weight(1f)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit")
+                            OutlinedButton(
+                                onClick = onEditEvent,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    Icons.Default.Create,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Edit")
+                            }
+
+                            OutlinedButton(
+                                onClick = onChangeStatus,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    Icons.Default.ManageHistory,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Status")
+                            }
                         }
+
                         OutlinedButton(
                             onClick = onDeleteEvent,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
+                                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.error
                             )
                         ) {
                             Icon(
@@ -640,17 +878,27 @@ private fun EventDetailContent(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Delete")
+                            Text("Delete Event")
                         }
                     }
                 } else {
+                    val canJoin = (event.status == EventStatus.ACTIVE || event.status == EventStatus.RESCHEDULED) && !isFull
+                    val canLeave = isAttending
+                    val enabled = !isJoining && (canJoin || canLeave)
+
                     Button(
-                        onClick = if (isAttending) onLeaveEvent else onJoinEvent,
+                        onClick = {
+                            if (isAttending) {
+                                onLeaveEvent()
+                            } else if (canJoin) {
+                                onJoinEvent()
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isJoining && (!isFull || isAttending),
+                        enabled = enabled,
                         colors = if (isAttending) {
                             ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
+                                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.error
                             )
                         } else {
                             ButtonDefaults.buttonColors()
@@ -659,11 +907,15 @@ private fun EventDetailContent(
                         if (isJoining) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
                             Icon(
-                                if (isAttending) Icons.Default.Clear else Icons.Default.Check,
+                                when {
+                                    isAttending -> Icons.Default.Clear
+                                    canJoin -> Icons.Default.Check
+                                    else -> Icons.Default.Info
+                                },
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -671,6 +923,10 @@ private fun EventDetailContent(
                             Text(
                                 when {
                                     isAttending -> "Leave event"
+                                    !canJoin && event.status == EventStatus.CANCELLED -> "Event cancelled"
+                                    !canJoin && event.status == EventStatus.POSTPONED -> "Event postponed"
+                                    !canJoin && event.status == EventStatus.COMPLETED -> "Event completed"
+                                    !canJoin && event.status == EventStatus.RESCHEDULED -> "Event rescheduled"
                                     isFull -> "Event is full"
                                     else -> "Join event"
                                 }

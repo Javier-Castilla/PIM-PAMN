@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.model.user.User
@@ -36,13 +37,18 @@ class JetpackComposeChatViewModel(
         private set
 
     private var currentChatId: UUID? = null
+    private var messagesCollectionJob: Job? = null
 
     fun getChatId(): UUID? = currentChatId
 
     override fun initChat(otherUser: User) {
         val currentUserId = getCurrentUserId() ?: return
+
+        cleanupChat()
+
         setOtherUser(otherUser)
         showLoading()
+
         viewModelScope.launch {
             createOrGetChatUseCase(currentUserId, otherUser.uuid)
                 .onSuccess { chat ->
@@ -60,7 +66,9 @@ class JetpackComposeChatViewModel(
     }
 
     private fun observeMessages(chatId: UUID, userId: UUID) {
-        viewModelScope.launch {
+        messagesCollectionJob?.cancel()
+
+        messagesCollectionJob = viewModelScope.launch {
             getChatMessagesUseCase(chatId).collect { messages ->
                 showMessages(messages)
             }
@@ -133,5 +141,21 @@ class JetpackComposeChatViewModel(
             isLoading = false,
             errorMessage = message
         )
+    }
+
+    fun cleanupChat() {
+        messagesCollectionJob?.cancel()
+        messagesCollectionJob = null
+        currentChatId = null
+        uiState = uiState.copy(
+            messages = emptyList(),
+            messageText = "",
+            errorMessage = null
+        )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cleanupChat()
     }
 }

@@ -1,6 +1,5 @@
 package software.ulpgc.wherewhen.domain.usecases.user
 
-import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 import software.ulpgc.wherewhen.domain.model.user.Profile
 import software.ulpgc.wherewhen.domain.ports.persistence.AuthenticationRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
@@ -22,7 +21,7 @@ class AuthenticateUserUseCase(
             return Result.failure(error)
         }
         val user = userRepository.getWith(uuid).mapCatching {
-            it ?: throw UserNotFoundException(uuid)
+            it
         }.getOrElse { error ->
             return Result.failure(error)
         }

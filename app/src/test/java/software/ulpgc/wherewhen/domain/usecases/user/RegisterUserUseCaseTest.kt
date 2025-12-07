@@ -4,7 +4,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import software.ulpgc.wherewhen.domain.exceptions.user.InvalidUserException
@@ -41,12 +41,13 @@ class RegisterUserUseCaseTest {
 
         val result = useCase.invoke(email, name, password)
 
-        Assert.assertTrue(result.isSuccess)
+        assertTrue(result.isSuccess)
         val profile = result.getOrNull()
-        Assert.assertNotNull(profile)
-        Assert.assertEquals(userId, profile?.uuid)
-        Assert.assertEquals(email, profile?.email)
-        Assert.assertEquals(name, profile?.name)
+        assertNotNull(profile)
+        assertEquals(userId, profile?.uuid)
+        assertEquals(email, profile?.email)
+        assertEquals(name, profile?.name)
+
         coVerify { authRepo.exists(email) }
         coVerify { authRepo.register(email, password) }
         coVerify { userRepo.register(any()) }
@@ -54,7 +55,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun `registration with existing email fails`() = runTest {
-        val email = Email.Companion.create("existing@example.com").getOrThrow()
+        val email = Email.create("existing@example.com").getOrThrow()
         val name = "Test User"
         val password = "password123"
 
@@ -62,15 +63,17 @@ class RegisterUserUseCaseTest {
 
         val result = useCase.invoke(email, name, password)
 
-        Assert.assertTrue(result.isFailure)
-        Assert.assertTrue(result.exceptionOrNull() is UserAlreadyExistsException)
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is UserAlreadyExistsException)
+
         coVerify { authRepo.exists(email) }
         coVerify(exactly = 0) { authRepo.register(any(), any()) }
+        coVerify(exactly = 0) { userRepo.register(any()) }
     }
 
     @Test
     fun `registration with blank name fails`() = runTest {
-        val email = Email.Companion.create("test@example.com").getOrThrow()
+        val email = Email.create("test@example.com").getOrThrow()
         val name = ""
         val password = "password123"
 
@@ -78,9 +81,11 @@ class RegisterUserUseCaseTest {
 
         val result = useCase.invoke(email, name, password)
 
-        Assert.assertTrue(result.isFailure)
-        Assert.assertTrue(result.exceptionOrNull() is InvalidUserException)
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is InvalidUserException)
+
         coVerify { authRepo.exists(email) }
         coVerify(exactly = 0) { authRepo.register(any(), any()) }
+        coVerify(exactly = 0) { userRepo.register(any()) }
     }
 }

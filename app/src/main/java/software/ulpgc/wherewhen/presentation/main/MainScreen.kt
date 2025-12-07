@@ -32,9 +32,9 @@ import software.ulpgc.wherewhen.presentation.chat.individual.ChatScreen
 import software.ulpgc.wherewhen.presentation.chat.individual.JetpackComposeChatViewModel
 import software.ulpgc.wherewhen.presentation.chat.list.ChatsScreen
 import software.ulpgc.wherewhen.presentation.chat.list.JetpackComposeChatsViewModel
-import software.ulpgc.wherewhen.presentation.events.CreateEventScreen
+import software.ulpgc.wherewhen.presentation.events.form.CreateEventScreen
 import software.ulpgc.wherewhen.presentation.events.EventsScreen
-import software.ulpgc.wherewhen.presentation.events.JetpackComposeCreateEventViewModel
+import software.ulpgc.wherewhen.presentation.events.form.JetpackComposeCreateEventViewModel
 import software.ulpgc.wherewhen.presentation.events.JetpackComposeEventsViewModel
 import software.ulpgc.wherewhen.presentation.events.individual.EventDetailScreen
 import software.ulpgc.wherewhen.presentation.events.individual.JetpackComposeEventDetailViewModel

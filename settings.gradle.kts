@@ -11,14 +11,19 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
+        maven(url = "https://jitpack.io") {
+            content {
+                includeGroup("com.github.yalantis")
+            }
+        }
     }
 }
 
 rootProject.name = "WhereWhen"
 include(":app")
- 

@@ -20,6 +20,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
+import com.yalantis.ucrop.UCrop
+import java.io.File
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,10 +36,36 @@ fun ProfileScreen(
     var isEditing by remember { mutableStateOf(false) }
     var showImageDialog by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
+    val cropLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val resultUri = result.data?.let { UCrop.getOutput(it) }
+            resultUri?.let { uri ->
+                viewModel.onImageSelected(uri)
+            }
+        }
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onImageSelected(it) }
+        uri?.let { sourceUri ->
+            val destinationUri = Uri.fromFile(
+                File(
+                    context.cacheDir,
+                    "cropped_${System.currentTimeMillis()}.jpg"
+                )
+            )
+
+            val uCrop = UCrop.of(sourceUri, destinationUri)
+                .withAspectRatio(1f, 1f)
+                .withMaxResultSize(1000, 1000)
+
+            cropLauncher.launch(uCrop.getIntent(context))
+        }
     }
 
     val currentImageModel: Any? =
