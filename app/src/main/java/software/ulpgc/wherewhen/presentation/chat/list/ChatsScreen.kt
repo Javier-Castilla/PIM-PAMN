@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -144,10 +145,13 @@ fun ChatItem(
 
             Column(horizontalAlignment = Alignment.End) {
                 if (chatWithUser.lastMessageAt != null) {
+                    val timeText = chatWithUser.lastMessageAt
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalTime()
+                        .format(DateTimeFormatter.ofPattern("HH:mm"))
+
                     Text(
-                        text = chatWithUser.lastMessageAt.format(
-                            DateTimeFormatter.ofPattern("HH:mm")
-                        ),
+                        text = timeText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

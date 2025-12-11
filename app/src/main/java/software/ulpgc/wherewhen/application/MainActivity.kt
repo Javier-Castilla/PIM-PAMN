@@ -18,7 +18,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
-import software.ulpgc.wherewhen.WhereWhenApplication
 import software.ulpgc.wherewhen.application.ui.theme.WhereWhenTheme
 import software.ulpgc.wherewhen.presentation.auth.login.LoginScreen
 import software.ulpgc.wherewhen.presentation.auth.login.JetpackComposeLoginViewModel

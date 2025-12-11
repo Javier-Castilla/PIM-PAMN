@@ -10,8 +10,7 @@ import software.ulpgc.wherewhen.domain.model.chat.Chat
 import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.chat.ChatNotFoundException
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.time.Instant
 
 class FirebaseChatRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -26,7 +25,6 @@ class FirebaseChatRepository(
         const val FIELD_LAST_MESSAGE_AT = "lastMessageAt"
         const val FIELD_UNREAD_COUNT_1 = "unreadCount1"
         const val FIELD_UNREAD_COUNT_2 = "unreadCount2"
-        val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     }
 
     override suspend fun createOrGetChat(userId1: UUID, userId2: UUID): Result<Chat> = runCatching {
@@ -105,7 +103,7 @@ class FirebaseChatRepository(
     override suspend fun updateLastMessage(
         chatId: UUID,
         message: String,
-        timestamp: LocalDateTime
+        timestamp: Instant
     ): Result<Unit> = runCatching {
         val querySnapshot = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_ID, chatId.value)
@@ -119,7 +117,7 @@ class FirebaseChatRepository(
             .update(
                 mapOf(
                     FIELD_LAST_MESSAGE to message,
-                    FIELD_LAST_MESSAGE_AT to timestamp.format(DATE_FORMATTER)
+                    FIELD_LAST_MESSAGE_AT to timestamp.toString()
                 )
             )
             .await()
@@ -162,7 +160,7 @@ class FirebaseChatRepository(
         FIELD_PARTICIPANT1_ID to participant1Id.value,
         FIELD_PARTICIPANT2_ID to participant2Id.value,
         FIELD_LAST_MESSAGE to lastMessage,
-        FIELD_LAST_MESSAGE_AT to lastMessageAt?.format(DATE_FORMATTER),
+        FIELD_LAST_MESSAGE_AT to lastMessageAt?.toString(),
         FIELD_UNREAD_COUNT_1 to unreadCount1,
         FIELD_UNREAD_COUNT_2 to unreadCount2
     )
@@ -179,7 +177,7 @@ class FirebaseChatRepository(
             ?: throw IllegalStateException("Missing participant2Id field")
         val lastMessage = getString(FIELD_LAST_MESSAGE)
         val lastMessageAt = getString(FIELD_LAST_MESSAGE_AT)
-            ?.let { LocalDateTime.parse(it, DATE_FORMATTER) }
+            ?.let { Instant.parse(it) }
         val unreadCount1 = getLong(FIELD_UNREAD_COUNT_1)?.toInt() ?: 0
         val unreadCount2 = getLong(FIELD_UNREAD_COUNT_2)?.toInt() ?: 0
 

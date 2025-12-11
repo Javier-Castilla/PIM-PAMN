@@ -6,7 +6,7 @@ import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import java.time.LocalDateTime
+import java.time.Instant
 
 class SendMessageUseCase(
     private val chatRepository: ChatRepository,
@@ -34,7 +34,7 @@ class SendMessageUseCase(
                 chatId = chatId,
                 senderId = senderId,
                 content = content,
-                timestamp = LocalDateTime.now(),
+                timestamp = Instant.now(),
                 isRead = false
             )
 
