@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.usecases.user.SearchUsersUseCase
@@ -48,6 +50,8 @@ class JetpackComposeSocialViewModel(
     var uiState by mutableStateOf(SocialUiState())
         private set
 
+    private var searchJob: Job? = null
+
     override fun showLoading() {
         uiState = uiState.copy(isLoading = true, errorMessage = null)
     }
@@ -79,7 +83,18 @@ class JetpackComposeSocialViewModel(
 
     fun onSearchQueryChange(query: String) {
         uiState = uiState.copy(searchQuery = query, errorMessage = null)
-        searchUsers()
+
+        searchJob?.cancel()
+
+        if (query.isBlank()) {
+            showEmptyResults()
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(500)
+            searchUsers()
+        }
     }
 
     private fun searchUsers() {
@@ -240,6 +255,7 @@ class JetpackComposeSocialViewModel(
     }
 
     fun clearSearch() {
+        searchJob?.cancel()
         uiState = uiState.copy(
             searchQuery = "",
             users = emptyList(),
