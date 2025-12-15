@@ -1,25 +1,21 @@
 package software.ulpgc.wherewhen.infrastructure.persistence.cached
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.shareIn
 import software.ulpgc.wherewhen.domain.model.friendship.Friendship
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import kotlin.time.Duration.Companion.minutes
 
 class CachedFriendshipRepository (
     private val delegate: FriendshipRepository
 ) : FriendshipRepository {
 
-    private data class CacheEntry<T>(
-        val data: T,
-        val timestamp: Long = System.currentTimeMillis()
-    ) {
-        fun isExpired(ttlMillis: Long): Boolean {
-            return System.currentTimeMillis() - timestamp > ttlMillis
-        }
-    }
-
-    private val friendshipsCache = mutableMapOf<UUID, CacheEntry<List<Friendship>>>()
-    private val cacheTimeToLive = 5.minutes.inWholeMilliseconds
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val friendshipsFlowCache = mutableMapOf<UUID, Flow<List<Friendship>>>()
 
     override suspend fun create(friendship: Friendship): Result<Friendship> {
         return delegate.create(friendship).also {
@@ -34,16 +30,14 @@ class CachedFriendshipRepository (
         return delegate.getById(id)
     }
 
-    override suspend fun getFriendshipsForUser(userId: UUID): Result<List<Friendship>> {
-        val cached = friendshipsCache[userId]
-        if (cached != null && !cached.isExpired(cacheTimeToLive)) {
-            return Result.success(cached.data)
-        }
-
-        return delegate.getFriendshipsForUser(userId).also { result ->
-            if (result.isSuccess) {
-                friendshipsCache[userId] = CacheEntry(result.getOrThrow())
-            }
+    override fun getFriendshipsForUser(userId: UUID): Flow<List<Friendship>> {
+        return friendshipsFlowCache.getOrPut(userId) {
+            delegate.getFriendshipsForUser(userId)
+                .shareIn(
+                    scope = scope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    replay = 1
+                )
         }
     }
 
@@ -61,10 +55,10 @@ class CachedFriendshipRepository (
     }
 
     private fun invalidateCache(userId: UUID) {
-        friendshipsCache.remove(userId)
+        friendshipsFlowCache.remove(userId)
     }
 
     fun clearCache() {
-        friendshipsCache.clear()
+        friendshipsFlowCache.clear()
     }
 }

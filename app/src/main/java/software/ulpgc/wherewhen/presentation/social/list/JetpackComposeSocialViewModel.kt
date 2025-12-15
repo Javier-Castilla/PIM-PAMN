@@ -110,7 +110,6 @@ class JetpackComposeSocialViewModel(
                 .fold(
                     onSuccess = {
                         searchUsers()
-                        loadPendingRequests()
                     },
                     onFailure = { error ->
                         val message = when (error) {
@@ -128,25 +127,21 @@ class JetpackComposeSocialViewModel(
 
     fun loadPendingRequests() {
         val currentUserId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
-            getPendingFriendRequestsUseCase(currentUserId)
-                .fold(
-                    onSuccess = { received ->
-                        getSentFriendRequestsUseCase(currentUserId)
-                            .fold(
-                                onSuccess = { sent ->
-                                    uiState = uiState.copy(
-                                        receivedRequests = received,
-                                        sentRequests = sent
-                                    )
-                                },
-                                onFailure = {
-                                    uiState = uiState.copy(receivedRequests = received)
-                                }
-                            )
-                    },
-                    onFailure = { showError(it.message ?: "Error loading requests") }
-                )
+            launch {
+                getPendingFriendRequestsUseCase(currentUserId)
+                    .collect { received ->
+                        uiState = uiState.copy(receivedRequests = received)
+                    }
+            }
+
+            launch {
+                getSentFriendRequestsUseCase(currentUserId)
+                    .collect { sent ->
+                        uiState = uiState.copy(sentRequests = sent)
+                    }
+            }
         }
     }
 
@@ -155,7 +150,7 @@ class JetpackComposeSocialViewModel(
         viewModelScope.launch {
             cancelFriendRequestUseCase(requestId, currentUserId)
                 .fold(
-                    onSuccess = { loadPendingRequests() },
+                    onSuccess = { },
                     onFailure = { error ->
                         val message = when (error) {
                             is FriendRequestNotFoundException -> "Request not found"
@@ -173,10 +168,7 @@ class JetpackComposeSocialViewModel(
         viewModelScope.launch {
             acceptFriendRequestUseCase(requestId, currentUserId)
                 .fold(
-                    onSuccess = {
-                        loadPendingRequests()
-                        loadFriends()
-                    },
+                    onSuccess = { },
                     onFailure = { error ->
                         val message = when (error) {
                             is FriendRequestNotFoundException -> "Request not found"
@@ -194,7 +186,7 @@ class JetpackComposeSocialViewModel(
         viewModelScope.launch {
             rejectFriendRequestUseCase(requestId, currentUserId)
                 .fold(
-                    onSuccess = { loadPendingRequests() },
+                    onSuccess = { },
                     onFailure = { error ->
                         val message = when (error) {
                             is FriendRequestNotFoundException -> "Request not found"
@@ -209,14 +201,12 @@ class JetpackComposeSocialViewModel(
 
     fun loadFriends() {
         val currentUserId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
             getUserFriendsUseCase(currentUserId)
-                .fold(
-                    onSuccess = { friends ->
-                        uiState = uiState.copy(friends = friends)
-                    },
-                    onFailure = { showError(it.message ?: "Error loading friends") }
-                )
+                .collect { friends ->
+                    uiState = uiState.copy(friends = friends)
+                }
         }
     }
 
@@ -236,7 +226,6 @@ class JetpackComposeSocialViewModel(
                 .fold(
                     onSuccess = {
                         hideRemoveFriendDialog()
-                        loadFriends()
                     },
                     onFailure = { error ->
                         hideRemoveFriendDialog()
