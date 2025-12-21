@@ -11,8 +11,7 @@ import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import software.ulpgc.wherewhen.domain.exceptions.chat.MessageNotFoundException
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.time.Instant
 
 class FirebaseMessageRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -27,7 +26,6 @@ class FirebaseMessageRepository(
         const val FIELD_CONTENT = "content"
         const val FIELD_TIMESTAMP = "timestamp"
         const val FIELD_IS_READ = "isRead"
-        val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     }
 
     override suspend fun sendMessage(message: Message): Result<Message> = runCatching {
@@ -99,7 +97,7 @@ class FirebaseMessageRepository(
         FIELD_CHAT_ID to chatId.value,
         FIELD_SENDER_ID to senderId.value,
         FIELD_CONTENT to content,
-        FIELD_TIMESTAMP to timestamp.format(DATE_FORMATTER),
+        FIELD_TIMESTAMP to timestamp.toString(),
         FIELD_IS_READ to isRead
     )
 
@@ -120,7 +118,7 @@ class FirebaseMessageRepository(
             ?: throw IllegalStateException("Missing content field")
 
         val timestamp = getString(FIELD_TIMESTAMP)
-            ?.let { LocalDateTime.parse(it, DATE_FORMATTER) }
+            ?.let { Instant.parse(it) }
             ?: throw IllegalStateException("Missing timestamp field")
 
         val isRead = getBoolean(FIELD_IS_READ) ?: false

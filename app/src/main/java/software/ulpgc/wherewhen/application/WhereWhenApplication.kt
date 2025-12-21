@@ -1,8 +1,9 @@
-package software.ulpgc.wherewhen
+package software.ulpgc.wherewhen.application
 
 import android.app.Application
 import android.content.Context
 import com.google.firebase.FirebaseApp
+import software.ulpgc.wherewhen.BuildConfig
 import software.ulpgc.wherewhen.domain.ports.location.LocationService
 import software.ulpgc.wherewhen.domain.ports.persistence.AuthenticationRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository

@@ -25,6 +25,7 @@ import com.google.firebase.auth.FirebaseAuth
 import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,6 +179,11 @@ fun MessageBubble(
     message: Message,
     isOwnMessage: Boolean
 ) {
+    val timeText = message.timestamp
+        .atZone(ZoneId.systemDefault())
+        .toLocalTime()
+        .format(DateTimeFormatter.ofPattern("HH:mm"))
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -218,9 +224,7 @@ fun MessageBubble(
                     horizontalArrangement = Arrangement.End
                 ) {
                     Text(
-                        text = message.timestamp.format(
-                            DateTimeFormatter.ofPattern("HH:mm")
-                        ),
+                        text = timeText,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isOwnMessage)
                             MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)

@@ -15,6 +15,7 @@ import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.usecases.chat.GetUserChatsUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import java.time.Instant
 import java.time.LocalDateTime
 
 class GetUserChatsUseCaseTest {
@@ -34,7 +35,7 @@ class GetUserChatsUseCaseTest {
     fun `maps chats to ChatWithUser including unread count`() = runTest {
         val userId = UUID.Companion.random()
         val otherUserId = UUID.Companion.random()
-        val now = LocalDateTime.now()
+        val now = Instant.now()
         val chat = Chat(
             id = UUID.Companion.random(),
             participant1Id = userId,

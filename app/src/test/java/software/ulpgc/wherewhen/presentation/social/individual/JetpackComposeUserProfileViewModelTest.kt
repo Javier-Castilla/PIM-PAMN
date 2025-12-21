@@ -10,6 +10,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -164,7 +165,7 @@ class JetpackComposeUserProfileViewModelTest {
         coEvery { checkFriendshipStatusUseCase.invoke(currentUserId, targetUserId) } returns Result.success(
             FriendshipStatus.REQUEST_RECEIVED
         )
-        coEvery { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        coEvery { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(requestWithUser)
         )
         coEvery { acceptFriendRequestUseCase.invoke(requestId, currentUserId) } returns Result.success(Unit)
@@ -222,7 +223,7 @@ class JetpackComposeUserProfileViewModelTest {
         every { friendRequest.receiverId } returns targetUserId
         every { friendRequest.id } returns requestId
 
-        coEvery { getSentFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        coEvery { getSentFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(sentWithUser)
         )
         coEvery { cancelFriendRequestUseCase.invoke(requestId, currentUserId) } returns Result.success(Unit)

@@ -12,6 +12,7 @@ import software.ulpgc.wherewhen.domain.model.chat.Message
 import software.ulpgc.wherewhen.domain.ports.persistence.MessageRepository
 import software.ulpgc.wherewhen.domain.usecases.chat.GetChatMessagesUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
+import java.time.Instant
 import java.time.LocalDateTime
 
 class GetChatMessagesUseCaseTest {
@@ -33,14 +34,14 @@ class GetChatMessagesUseCaseTest {
             chatId = chatId,
             senderId = UUID.Companion.random(),
             content = "hi",
-            timestamp = LocalDateTime.now()
+            timestamp = Instant.now()
         )
         val message2 = Message(
             id = UUID.Companion.random(),
             chatId = chatId,
             senderId = UUID.Companion.random(),
             content = "hello",
-            timestamp = LocalDateTime.now()
+            timestamp = Instant.now()
         )
 
         every { messageRepository.observeMessages(chatId) } returns flowOf(

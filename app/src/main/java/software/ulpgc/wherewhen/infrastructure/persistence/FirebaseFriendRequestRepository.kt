@@ -1,13 +1,16 @@
 package software.ulpgc.wherewhen.infrastructure.persistence
 
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestNotFoundException
 import software.ulpgc.wherewhen.domain.model.friendship.FriendRequest
 import software.ulpgc.wherewhen.domain.model.friendship.FriendRequestStatus
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestNotFoundException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -44,24 +47,36 @@ class FirebaseFriendRequestRepository(
             ?: throw FriendRequestNotFoundException(id)
     }
 
-    override suspend fun getPendingRequestsForUser(userId: UUID): Result<List<FriendRequest>> = runCatching {
-        firestore.collection(COLLECTION)
+    override fun getPendingRequestsForUser(userId: UUID): Flow<List<FriendRequest>> = callbackFlow {
+        val listener = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_RECEIVER_ID, userId.value)
             .whereEqualTo(FIELD_STATUS, FriendRequestStatus.PENDING.name)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toFriendRequest() }
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val requests = snapshot?.documents?.mapNotNull { it.toFriendRequest() } ?: emptyList()
+                trySend(requests)
+            }
+
+        awaitClose { listener.remove() }
     }
 
-    override suspend fun getSentRequestsFromUser(userId: UUID): Result<List<FriendRequest>> = runCatching {
-        firestore.collection(COLLECTION)
+    override fun getSentRequestsFromUser(userId: UUID): Flow<List<FriendRequest>> = callbackFlow {
+        val listener = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_SENDER_ID, userId.value)
             .whereEqualTo(FIELD_STATUS, FriendRequestStatus.PENDING.name)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toFriendRequest() }
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val requests = snapshot?.documents?.mapNotNull { it.toFriendRequest() } ?: emptyList()
+                trySend(requests)
+            }
+
+        awaitClose { listener.remove() }
     }
 
     override suspend fun getPendingBetweenUsers(senderId: UUID, receiverId: UUID): Result<FriendRequest?> = runCatching {

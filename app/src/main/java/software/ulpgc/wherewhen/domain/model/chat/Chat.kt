@@ -1,14 +1,14 @@
 package software.ulpgc.wherewhen.domain.model.chat
 
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import java.time.LocalDateTime
+import java.time.Instant
 
 data class Chat(
     val id: UUID,
     val participant1Id: UUID,
     val participant2Id: UUID,
     val lastMessage: String? = null,
-    val lastMessageAt: LocalDateTime? = null,
+    val lastMessageAt: Instant? = null,
     val unreadCount1: Int = 0,
     val unreadCount2: Int = 0
 ) {

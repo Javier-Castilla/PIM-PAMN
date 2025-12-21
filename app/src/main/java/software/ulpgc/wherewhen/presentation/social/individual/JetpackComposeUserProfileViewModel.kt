@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.model.user.Profile
 import software.ulpgc.wherewhen.domain.usecases.friendship.*
@@ -92,14 +93,13 @@ class JetpackComposeUserProfileViewModel(
             .getOrDefault(FriendshipStatus.NOT_FRIENDS)
 
         if (status == FriendshipStatus.REQUEST_RECEIVED) {
-            getPendingFriendRequestsUseCase(currentUserId).fold(
-                onSuccess = { requests ->
-                    currentPendingRequestId = requests
-                        .find { it.request.senderId == targetUserId }
-                        ?.request?.id
-                },
-                onFailure = { }
-            )
+            try {
+                val requests = getPendingFriendRequestsUseCase(currentUserId).first()
+                currentPendingRequestId = requests
+                    .find { it.request.senderId == targetUserId }
+                    ?.request?.id
+            } catch (e: Exception) {
+            }
         }
 
         showUserProfile(profile, status)
@@ -134,30 +134,28 @@ class JetpackComposeUserProfileViewModel(
         val targetUserId = uiState.profile?.uuid ?: return
 
         viewModelScope.launch {
-            getSentFriendRequestsUseCase(currentUserId).fold(
-                onSuccess = { requests ->
-                    val requestId = requests
-                        .find { it.request.receiverId == targetUserId }
-                        ?.request?.id
+            try {
+                val requests = getSentFriendRequestsUseCase(currentUserId).first()
+                val requestId = requests
+                    .find { it.request.receiverId == targetUserId }
+                    ?.request?.id
 
-                    if (requestId != null) {
-                        cancelFriendRequestUseCase(requestId, currentUserId).fold(
-                            onSuccess = {
-                                updateFriendshipStatus(FriendshipStatus.NOT_FRIENDS)
-                                hideCancelRequestDialog()
-                            },
-                            onFailure = { error ->
-                                showError(error.message ?: "Error canceling friend request")
-                                hideCancelRequestDialog()
-                            }
-                        )
-                    }
-                },
-                onFailure = { error ->
-                    showError(error.message ?: "Error loading requests")
-                    hideCancelRequestDialog()
+                if (requestId != null) {
+                    cancelFriendRequestUseCase(requestId, currentUserId).fold(
+                        onSuccess = {
+                            updateFriendshipStatus(FriendshipStatus.NOT_FRIENDS)
+                            hideCancelRequestDialog()
+                        },
+                        onFailure = { error ->
+                            showError(error.message ?: "Error canceling friend request")
+                            hideCancelRequestDialog()
+                        }
+                    )
                 }
-            )
+            } catch (e: Exception) {
+                showError(e.message ?: "Error loading requests")
+                hideCancelRequestDialog()
+            }
         }
     }
 
