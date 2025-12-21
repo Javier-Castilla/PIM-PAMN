@@ -1,5 +1,7 @@
 package software.ulpgc.wherewhen.domain.usecases.friendship
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import software.ulpgc.wherewhen.domain.model.friendship.FriendRequest
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
@@ -15,9 +17,9 @@ class GetPendingFriendRequestsUseCase(
     private val friendRequestRepository: FriendRequestRepository,
     private val userRepository: UserRepository
 ) {
-    suspend operator fun invoke(userId: UUID): Result<List<FriendRequestWithUser>> {
+    operator fun invoke(userId: UUID): Flow<List<FriendRequestWithUser>> {
         return friendRequestRepository.getPendingRequestsForUser(userId)
-            .mapCatching { requests ->
+            .map { requests ->
                 requests.mapNotNull { request ->
                     userRepository.getPublicUser(request.senderId)
                         .map { user -> FriendRequestWithUser(request, user) }

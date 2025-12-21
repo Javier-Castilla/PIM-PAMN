@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import software.ulpgc.wherewhen.domain.model.chat.Chat
 import software.ulpgc.wherewhen.domain.ports.persistence.ChatRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import java.time.LocalDateTime
+import java.time.Instant
 import kotlin.time.Duration.Companion.minutes
 
 class CachedChatRepository(
@@ -49,7 +49,11 @@ class CachedChatRepository(
         return delegate.observeUserChats(userId)
     }
 
-    override suspend fun updateLastMessage(chatId: UUID, message: String, timestamp: LocalDateTime): Result<Unit> {
+    override suspend fun updateLastMessage(
+        chatId: UUID,
+        message: String,
+        timestamp: Instant
+    ): Result<Unit> {
         return delegate.updateLastMessage(chatId, message, timestamp).also {
             if (it.isSuccess) {
                 invalidateCache(chatId)

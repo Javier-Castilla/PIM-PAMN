@@ -3,6 +3,8 @@ package software.ulpgc.wherewhen.domain.usecases.friendship
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -41,16 +43,14 @@ class GetUserFriendsUseCaseTest {
         )
         val friendUser = mockk<User>()
 
-        coEvery { friendshipRepository.getFriendshipsForUser(userId) } returns Result.success(listOf(friendship))
+        coEvery { friendshipRepository.getFriendshipsForUser(userId) } returns flowOf(listOf(friendship))
         coEvery { userRepository.getPublicUser(friendId) } returns Result.success(friendUser)
 
-        val result = useCase.invoke(userId)
+        val result = useCase.invoke(userId).first()
 
-        assertTrue(result.isSuccess)
-        val list = result.getOrNull()
-        assertNotNull(list)
-        assertEquals(1, list?.size)
-        assertEquals(friendUser, list?.first())
+        assertNotNull(result)
+        assertEquals(1, result.size)
+        assertEquals(friendUser, result.first())
 
         coVerify { friendshipRepository.getFriendshipsForUser(userId) }
         coVerify { userRepository.getPublicUser(friendId) }
@@ -67,15 +67,13 @@ class GetUserFriendsUseCaseTest {
             createdAt = LocalDateTime.now()
         )
 
-        coEvery { friendshipRepository.getFriendshipsForUser(userId) } returns Result.success(listOf(friendship))
+        coEvery { friendshipRepository.getFriendshipsForUser(userId) } returns flowOf(listOf(friendship))
         coEvery { userRepository.getPublicUser(friendId) } returns Result.failure(RuntimeException("not found"))
 
-        val result = useCase.invoke(userId)
+        val result = useCase.invoke(userId).first()
 
-        assertTrue(result.isSuccess)
-        val list = result.getOrNull()
-        assertNotNull(list)
-        assertTrue(list!!.isEmpty())
+        assertNotNull(result)
+        assertTrue(result.isEmpty())
 
         coVerify { friendshipRepository.getFriendshipsForUser(userId) }
         coVerify { userRepository.getPublicUser(friendId) }

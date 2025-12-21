@@ -1,5 +1,7 @@
 package software.ulpgc.wherewhen.domain.usecases.friendship
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
@@ -9,9 +11,9 @@ class GetUserFriendsUseCase(
     private val friendshipRepository: FriendshipRepository,
     private val userRepository: UserRepository
 ) {
-    suspend operator fun invoke(userId: UUID): Result<List<User>> {
+    operator fun invoke(userId: UUID): Flow<List<User>> {
         return friendshipRepository.getFriendshipsForUser(userId)
-            .mapCatching { friendships ->
+            .map { friendships ->
                 friendships.mapNotNull { friendship ->
                     friendship.getOtherUserId(userId)?.let { friendId ->
                         userRepository.getPublicUser(friendId).getOrNull()

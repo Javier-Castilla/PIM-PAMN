@@ -2,6 +2,11 @@ package software.ulpgc.wherewhen.infrastructure.persistence
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import software.ulpgc.wherewhen.domain.model.friendship.Friendship
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
@@ -41,22 +46,63 @@ class FirebaseFriendshipRepository(
             ?: throw FriendshipNotFoundException(id, id)
     }
 
-    override suspend fun getFriendshipsForUser(userId: UUID): Result<List<Friendship>> = runCatching {
-        val asUser1 = firestore.collection(COLLECTION)
+    override fun getFriendshipsForUser(userId: UUID): Flow<List<Friendship>> = callbackFlow {
+        val listener1 = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_USER1_ID, userId.value)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toFriendship() }
+            .addSnapshotListener { _, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                launch {
+                    val asUser1 = firestore.collection(COLLECTION)
+                        .whereEqualTo(FIELD_USER1_ID, userId.value)
+                        .get()
+                        .await()
+                        .documents
+                        .mapNotNull { it.toFriendship() }
 
-        val asUser2 = firestore.collection(COLLECTION)
+                    val asUser2 = firestore.collection(COLLECTION)
+                        .whereEqualTo(FIELD_USER2_ID, userId.value)
+                        .get()
+                        .await()
+                        .documents
+                        .mapNotNull { it.toFriendship() }
+
+                    trySend((asUser1 + asUser2).distinctBy { it.id })
+                }
+            }
+
+        val listener2 = firestore.collection(COLLECTION)
             .whereEqualTo(FIELD_USER2_ID, userId.value)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toFriendship() }
+            .addSnapshotListener { _, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                launch {
+                    val asUser1 = firestore.collection(COLLECTION)
+                        .whereEqualTo(FIELD_USER1_ID, userId.value)
+                        .get()
+                        .await()
+                        .documents
+                        .mapNotNull { it.toFriendship() }
 
-        (asUser1 + asUser2).distinctBy { it.id }
+                    val asUser2 = firestore.collection(COLLECTION)
+                        .whereEqualTo(FIELD_USER2_ID, userId.value)
+                        .get()
+                        .await()
+                        .documents
+                        .mapNotNull { it.toFriendship() }
+
+                    trySend((asUser1 + asUser2).distinctBy { it.id })
+                }
+            }
+
+        awaitClose {
+            listener1.remove()
+            listener2.remove()
+        }
     }
 
     override suspend fun existsBetweenUsers(user1Id: UUID, user2Id: UUID): Result<Boolean> = runCatching {

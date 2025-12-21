@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.usecases.user.SearchUsersUseCase
@@ -48,6 +50,8 @@ class JetpackComposeSocialViewModel(
     var uiState by mutableStateOf(SocialUiState())
         private set
 
+    private var searchJob: Job? = null
+
     override fun showLoading() {
         uiState = uiState.copy(isLoading = true, errorMessage = null)
     }
@@ -79,7 +83,18 @@ class JetpackComposeSocialViewModel(
 
     fun onSearchQueryChange(query: String) {
         uiState = uiState.copy(searchQuery = query, errorMessage = null)
-        searchUsers()
+
+        searchJob?.cancel()
+
+        if (query.isBlank()) {
+            showEmptyResults()
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(500)
+            searchUsers()
+        }
     }
 
     private fun searchUsers() {
@@ -110,7 +125,6 @@ class JetpackComposeSocialViewModel(
                 .fold(
                     onSuccess = {
                         searchUsers()
-                        loadPendingRequests()
                     },
                     onFailure = { error ->
                         val message = when (error) {
@@ -128,25 +142,21 @@ class JetpackComposeSocialViewModel(
 
     fun loadPendingRequests() {
         val currentUserId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
-            getPendingFriendRequestsUseCase(currentUserId)
-                .fold(
-                    onSuccess = { received ->
-                        getSentFriendRequestsUseCase(currentUserId)
-                            .fold(
-                                onSuccess = { sent ->
-                                    uiState = uiState.copy(
-                                        receivedRequests = received,
-                                        sentRequests = sent
-                                    )
-                                },
-                                onFailure = {
-                                    uiState = uiState.copy(receivedRequests = received)
-                                }
-                            )
-                    },
-                    onFailure = { showError(it.message ?: "Error loading requests") }
-                )
+            launch {
+                getPendingFriendRequestsUseCase(currentUserId)
+                    .collect { received ->
+                        uiState = uiState.copy(receivedRequests = received)
+                    }
+            }
+
+            launch {
+                getSentFriendRequestsUseCase(currentUserId)
+                    .collect { sent ->
+                        uiState = uiState.copy(sentRequests = sent)
+                    }
+            }
         }
     }
 
@@ -155,7 +165,7 @@ class JetpackComposeSocialViewModel(
         viewModelScope.launch {
             cancelFriendRequestUseCase(requestId, currentUserId)
                 .fold(
-                    onSuccess = { loadPendingRequests() },
+                    onSuccess = { },
                     onFailure = { error ->
                         val message = when (error) {
                             is FriendRequestNotFoundException -> "Request not found"
@@ -173,10 +183,7 @@ class JetpackComposeSocialViewModel(
         viewModelScope.launch {
             acceptFriendRequestUseCase(requestId, currentUserId)
                 .fold(
-                    onSuccess = {
-                        loadPendingRequests()
-                        loadFriends()
-                    },
+                    onSuccess = { },
                     onFailure = { error ->
                         val message = when (error) {
                             is FriendRequestNotFoundException -> "Request not found"
@@ -194,7 +201,7 @@ class JetpackComposeSocialViewModel(
         viewModelScope.launch {
             rejectFriendRequestUseCase(requestId, currentUserId)
                 .fold(
-                    onSuccess = { loadPendingRequests() },
+                    onSuccess = { },
                     onFailure = { error ->
                         val message = when (error) {
                             is FriendRequestNotFoundException -> "Request not found"
@@ -209,14 +216,12 @@ class JetpackComposeSocialViewModel(
 
     fun loadFriends() {
         val currentUserId = getCurrentUserId() ?: return
+
         viewModelScope.launch {
             getUserFriendsUseCase(currentUserId)
-                .fold(
-                    onSuccess = { friends ->
-                        uiState = uiState.copy(friends = friends)
-                    },
-                    onFailure = { showError(it.message ?: "Error loading friends") }
-                )
+                .collect { friends ->
+                    uiState = uiState.copy(friends = friends)
+                }
         }
     }
 
@@ -236,7 +241,6 @@ class JetpackComposeSocialViewModel(
                 .fold(
                     onSuccess = {
                         hideRemoveFriendDialog()
-                        loadFriends()
                     },
                     onFailure = { error ->
                         hideRemoveFriendDialog()
@@ -251,6 +255,7 @@ class JetpackComposeSocialViewModel(
     }
 
     fun clearSearch() {
+        searchJob?.cancel()
         uiState = uiState.copy(
             searchQuery = "",
             users = emptyList(),
