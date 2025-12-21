@@ -10,8 +10,10 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -51,6 +53,7 @@ class JetpackComposeSocialViewModelTest {
     private lateinit var firebaseUser: FirebaseUser
 
     private val dispatcher = StandardTestDispatcher()
+    private lateinit var testScope: TestScope
 
     private val currentUserId: UUID = UUID.random()
     private val currentUserIdString: String = currentUserId.toString()
@@ -60,6 +63,7 @@ class JetpackComposeSocialViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
+        testScope = TestScope(dispatcher)
 
         mockkStatic(FirebaseAuth::class)
         firebaseAuth = mockk()
@@ -96,8 +100,9 @@ class JetpackComposeSocialViewModelTest {
 
     @After
     fun tearDown() {
-        unmockkStatic(FirebaseAuth::class)
+        testScope.cancel()
         Dispatchers.resetMain()
+        unmockkStatic(FirebaseAuth::class)
     }
 
     @Test
@@ -381,6 +386,7 @@ class JetpackComposeSocialViewModelTest {
         viewModel.showError("error")
 
         viewModel.clearSearch()
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertEquals("", state.searchQuery)

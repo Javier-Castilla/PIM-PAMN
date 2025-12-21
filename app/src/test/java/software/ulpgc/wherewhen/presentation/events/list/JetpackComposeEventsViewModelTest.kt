@@ -5,10 +5,13 @@ import com.google.firebase.auth.FirebaseUser
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -38,7 +41,8 @@ class JetpackComposeEventsViewModelTest {
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var firebaseUser: FirebaseUser
 
-    private val dispatcher = UnconfinedTestDispatcher()
+    private val dispatcher = StandardTestDispatcher()
+    private lateinit var testScope: TestScope
 
     private val currentUserId: UUID = UUID.random()
     private val currentUserIdString: String = currentUserId.toString()
@@ -57,6 +61,7 @@ class JetpackComposeEventsViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
+        testScope = TestScope(dispatcher)
 
         mockkStatic(FirebaseAuth::class)
         firebaseAuth = mockk()
@@ -74,7 +79,11 @@ class JetpackComposeEventsViewModelTest {
         locationService = mockk()
 
         coEvery { locationService.getCurrentLocation() } returns Result.success(defaultLocation)
-        coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(emptyList())
+        coEvery { searchNearbyEventsUseCase.invoke(any(), any()) } returns Result.success(emptyList())
+        coEvery { searchEventsByNameUseCase.invoke(any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { searchEventsByCategoryUseCase.invoke(any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { getUserJoinedEventsUseCase.invoke(any()) } returns Result.success(emptyList())
+        coEvery { getUserCreatedEventsUseCase.invoke(any()) } returns Result.success(emptyList())
 
         viewModel = JetpackComposeEventsViewModel(
             searchNearbyEventsUseCase,
@@ -88,12 +97,15 @@ class JetpackComposeEventsViewModelTest {
 
     @After
     fun tearDown() {
-        unmockkStatic(FirebaseAuth::class)
+        testScope.cancel()
         Dispatchers.resetMain()
+        unmockkStatic(FirebaseAuth::class)
     }
 
     @Test
-    fun `initial state loads location and nearby events`() {
+    fun `initial state loads location and nearby events`() = runTest {
+        advanceUntilIdle()
+
         assertEquals(0, viewModel.selectedTab)
         assertEquals("", viewModel.searchQuery)
         assertEquals(25, viewModel.radiusKm)
@@ -109,7 +121,7 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `loadNearbyEvents filters only active or rescheduled and sorts by date and distance`() = runBlocking {
+    fun `loadNearbyEvents filters only active or rescheduled and sorts by date and distance`() = runTest {
         val event1 = createEvent(status = EventStatus.CANCELLED, distance = 5.0)
         val event2 = createEvent(status = EventStatus.ACTIVE, distance = 10.0, plusMinutes = 60)
         val event3 = createEvent(status = EventStatus.ACTIVE, distance = 2.0, plusMinutes = 30)
@@ -119,6 +131,7 @@ class JetpackComposeEventsViewModelTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(events)
 
         viewModel.loadNearbyEvents()
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertTrue(state is UiState.Success)
@@ -128,11 +141,12 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `loadNearbyEvents failure maps error with handleException`() {
+    fun `loadNearbyEvents failure maps error with handleException`() = runTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns
                 Result.failure(LocationUnavailableException())
 
         viewModel.loadNearbyEvents()
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertTrue(state is UiState.Error)
@@ -140,13 +154,17 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `onTabSelected 1 loads joined events and clears search`() {
+    fun `onTabSelected 1 loads joined events and clears search`() = runTest {
         coEvery { getUserJoinedEventsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("rock")
+        advanceUntilIdle()
+
         viewModel.onCategorySelected(EventCategory.MUSIC)
+        advanceUntilIdle()
 
         viewModel.onTabSelected(1)
+        advanceUntilIdle()
 
         assertEquals(1, viewModel.selectedTab)
         assertEquals("", viewModel.searchQuery)
@@ -156,13 +174,17 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `onTabSelected 2 loads created events and clears search`() {
+    fun `onTabSelected 2 loads created events and clears search`() = runTest {
         coEvery { getUserCreatedEventsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("music")
+        advanceUntilIdle()
+
         viewModel.onCategorySelected(EventCategory.MUSIC)
+        advanceUntilIdle()
 
         viewModel.onTabSelected(2)
+        advanceUntilIdle()
 
         assertEquals(2, viewModel.selectedTab)
         assertEquals("", viewModel.searchQuery)
@@ -172,10 +194,11 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `loadJoinedEvents without user sets authentication error`() {
+    fun `loadJoinedEvents without user sets authentication error`() = runTest {
         every { firebaseAuth.currentUser } returns null
 
         viewModel.onTabSelected(1)
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertTrue(state is UiState.Error)
@@ -184,10 +207,11 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `loadCreatedEvents without user sets authentication error`() {
+    fun `loadCreatedEvents without user sets authentication error`() = runTest {
         every { firebaseAuth.currentUser } returns null
 
         viewModel.onTabSelected(2)
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertTrue(state is UiState.Error)
@@ -196,116 +220,142 @@ class JetpackComposeEventsViewModelTest {
     }
 
     @Test
-    fun `onSearchQueryChange in nearby tab with blank query reloads nearby events`() {
+    fun `onSearchQueryChange in nearby tab with blank query reloads nearby events`() = runTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("test")
-        coEvery { searchEventsByNameUseCase.invoke(defaultLocation, "test", any()) } returns Result.success(emptyList())
-        viewModel.onSearchQueryChange("test")
+        advanceUntilIdle()
 
         viewModel.onSearchQueryChange("")
+        advanceUntilIdle()
 
-        coVerify(atLeast = 1) { searchNearbyEventsUseCase.invoke(defaultLocation, any()) }
+        coVerify(atLeast = 2) { searchNearbyEventsUseCase.invoke(defaultLocation, any()) }
     }
 
     @Test
-    fun `onSearchQueryChange in nearby tab with text calls searchByName`() {
+    fun `onSearchQueryChange in nearby tab with text calls searchByName`() = runTest {
         coEvery { searchEventsByNameUseCase.invoke(defaultLocation, "rock", any()) } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("rock")
+        advanceUntilIdle()
 
         coVerify { searchEventsByNameUseCase.invoke(defaultLocation, "rock", any()) }
     }
 
     @Test
-    fun `onCategorySelected in nearby tab with null category reloads based on query`() {
+    fun `onCategorySelected in nearby tab with null category reloads based on query`() = runTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(emptyList())
         coEvery { searchEventsByNameUseCase.invoke(defaultLocation, "rock", any()) } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("rock")
+        advanceUntilIdle()
+
         viewModel.onCategorySelected(null)
+        advanceUntilIdle()
 
         coVerify { searchEventsByNameUseCase.invoke(defaultLocation, "rock", any()) }
     }
 
     @Test
-    fun `onCategorySelected in nearby tab with category calls searchByCategory`() {
+    fun `onCategorySelected in nearby tab with category calls searchByCategory`() = runTest {
         coEvery { searchEventsByCategoryUseCase.invoke(defaultLocation, EventCategory.MUSIC, any()) } returns Result.success(emptyList())
 
         viewModel.onCategorySelected(EventCategory.MUSIC)
+        advanceUntilIdle()
 
         coVerify { searchEventsByCategoryUseCase.invoke(defaultLocation, EventCategory.MUSIC, any()) }
     }
 
     @Test
-    fun `onRadiusChange in nearby tab triggers reload according to current filters`() {
+    fun `onRadiusChange in nearby tab triggers reload according to current filters`() = runTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, 50) } returns Result.success(emptyList())
         coEvery { searchEventsByNameUseCase.invoke(defaultLocation, "rock", 50) } returns Result.success(emptyList())
         coEvery { searchEventsByCategoryUseCase.invoke(defaultLocation, EventCategory.MUSIC, 50) } returns Result.success(emptyList())
 
         viewModel.onRadiusChange(50)
+        advanceUntilIdle()
         coVerify { searchNearbyEventsUseCase.invoke(defaultLocation, 50) }
 
         viewModel.onSearchQueryChange("rock")
+        advanceUntilIdle()
         viewModel.onRadiusChange(50)
+        advanceUntilIdle()
         coVerify { searchEventsByNameUseCase.invoke(defaultLocation, "rock", 50) }
 
         viewModel.onCategorySelected(EventCategory.MUSIC)
+        advanceUntilIdle()
         viewModel.onSearchQueryChange("")
+        advanceUntilIdle()
         viewModel.onRadiusChange(50)
+        advanceUntilIdle()
         coVerify { searchEventsByCategoryUseCase.invoke(defaultLocation, EventCategory.MUSIC, 50) }
     }
 
     @Test
-    fun `onRefresh reloads according to selected tab`() {
+    fun `onRefresh reloads according to selected tab`() = runTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(emptyList())
         coEvery { getUserJoinedEventsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
         coEvery { getUserCreatedEventsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
 
         viewModel.onRefresh()
+        advanceUntilIdle()
         coVerify { searchNearbyEventsUseCase.invoke(defaultLocation, any()) }
 
         viewModel.onTabSelected(1)
+        advanceUntilIdle()
         viewModel.onRefresh()
+        advanceUntilIdle()
         coVerify { getUserJoinedEventsUseCase.invoke(currentUserId) }
 
         viewModel.onTabSelected(2)
+        advanceUntilIdle()
         viewModel.onRefresh()
+        advanceUntilIdle()
         coVerify { getUserCreatedEventsUseCase.invoke(currentUserId) }
     }
 
     @Test
-    fun `clearSearch resets query and category and reloads according to tab`() {
+    fun `clearSearch resets query and category and reloads according to tab`() = runTest {
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(emptyList())
         coEvery { getUserJoinedEventsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
         coEvery { getUserCreatedEventsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("something")
+        advanceUntilIdle()
         viewModel.onCategorySelected(EventCategory.MUSIC)
+        advanceUntilIdle()
 
         viewModel.clearSearch()
+        advanceUntilIdle()
         assertEquals("", viewModel.searchQuery)
         assertNull(viewModel.selectedCategory)
-        coVerify { searchNearbyEventsUseCase.invoke(defaultLocation, any()) }
+        coVerify(atLeast = 1) { searchNearbyEventsUseCase.invoke(defaultLocation, any()) }
 
         viewModel.onTabSelected(1)
+        advanceUntilIdle()
         viewModel.onSearchQueryChange("x")
+        advanceUntilIdle()
         viewModel.clearSearch()
+        advanceUntilIdle()
         coVerify { getUserJoinedEventsUseCase.invoke(currentUserId) }
 
         viewModel.onTabSelected(2)
+        advanceUntilIdle()
         viewModel.onSearchQueryChange("y")
+        advanceUntilIdle()
         viewModel.clearSearch()
+        advanceUntilIdle()
         coVerify { getUserCreatedEventsUseCase.invoke(currentUserId) }
     }
 
     @Test
-    fun `removeEventFromCurrentList removes event from success state`() {
+    fun `removeEventFromCurrentList removes event from success state`() = runTest {
         val event1 = createEvent()
         val event2 = createEvent()
         coEvery { searchNearbyEventsUseCase.invoke(defaultLocation, any()) } returns Result.success(listOf(event1, event2))
 
         viewModel.loadNearbyEvents()
+        advanceUntilIdle()
 
         viewModel.removeEventFromCurrentList(event1.id)
 
