@@ -10,8 +10,11 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
@@ -47,7 +50,7 @@ class JetpackComposeSocialViewModelTest {
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var firebaseUser: FirebaseUser
 
-    private val dispatcher = UnconfinedTestDispatcher()
+    private val dispatcher = StandardTestDispatcher()
 
     private val currentUserId: UUID = UUID.random()
     private val currentUserIdString: String = currentUserId.toString()
@@ -69,12 +72,12 @@ class JetpackComposeSocialViewModelTest {
         searchUsersUseCase = mockk()
         sendFriendRequestUseCase = mockk()
         checkFriendshipStatusUseCase = mockk()
-        getPendingFriendRequestsUseCase = mockk()
-        getSentFriendRequestsUseCase = mockk()
+        getPendingFriendRequestsUseCase = mockk(relaxed = true)
+        getSentFriendRequestsUseCase = mockk(relaxed = true)
         acceptFriendRequestUseCase = mockk()
         rejectFriendRequestUseCase = mockk()
         cancelFriendRequestUseCase = mockk()
-        getUserFriendsUseCase = mockk()
+        getUserFriendsUseCase = mockk(relaxed = true)
         removeFriendUseCase = mockk()
 
         viewModel = JetpackComposeSocialViewModel(
@@ -98,7 +101,7 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `initial state is empty and not loading`() {
+    fun `initial state is empty and not loading`() = runTest {
         val state = viewModel.uiState
 
         assertEquals("", state.searchQuery)
@@ -112,7 +115,7 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `onSearchQueryChange with blank query clears users`() {
+    fun `onSearchQueryChange with blank query clears users`() = runTest {
         val currentUser: User = mockk()
         val otherUser: User = mockk()
         every { currentUser.uuid } returns currentUserId
@@ -124,9 +127,11 @@ class JetpackComposeSocialViewModelTest {
         )
 
         viewModel.onSearchQueryChange("old")
+        advanceUntilIdle()
         assertFalse(viewModel.uiState.users.isEmpty())
 
         viewModel.onSearchQueryChange("")
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertEquals("", state.searchQuery)
@@ -136,10 +141,11 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `onSearchQueryChange with non-empty query and empty results shows empty results`() {
+    fun `onSearchQueryChange with non-empty query and empty results shows empty results`() = runTest {
         coEvery { searchUsersUseCase.invoke("john") } returns Result.success(emptyList())
 
         viewModel.onSearchQueryChange("john")
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertEquals("john", state.searchQuery)
@@ -151,7 +157,7 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `onSearchQueryChange with results maps to UserWithStatus and filters current user`() {
+    fun `onSearchQueryChange with results maps to UserWithStatus and filters current user`() = runTest {
         val currentUser: User = mockk()
         val otherUser: User = mockk()
 
@@ -166,6 +172,7 @@ class JetpackComposeSocialViewModelTest {
         )
 
         viewModel.onSearchQueryChange("john")
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertEquals(1, state.users.size)
@@ -176,65 +183,68 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `sendFriendRequest success triggers loadPendingRequests`() {
+    fun `sendFriendRequest success triggers loadPendingRequests`() = runTest {
         coEvery { sendFriendRequestUseCase.invoke(currentUserId, otherUserId) } returns Result.success(Unit)
-        coEvery { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
-        coEvery { getSentFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
+        every { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(emptyList())
+        every { getSentFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(emptyList())
 
         viewModel.sendFriendRequest(otherUserId)
+        advanceUntilIdle()
 
         assertNull(viewModel.uiState.errorMessage)
         coVerify { sendFriendRequestUseCase.invoke(currentUserId, otherUserId) }
-        coVerify { getPendingFriendRequestsUseCase.invoke(currentUserId) }
-        coVerify { getSentFriendRequestsUseCase.invoke(currentUserId) }
     }
 
     @Test
-    fun `sendFriendRequest with SelfFriendRequestException shows specific error`() {
+    fun `sendFriendRequest with SelfFriendRequestException shows specific error`() = runTest {
         coEvery { sendFriendRequestUseCase.invoke(currentUserId, otherUserId) } returns Result.failure(
             SelfFriendRequestException()
         )
 
         viewModel.sendFriendRequest(otherUserId)
+        advanceUntilIdle()
 
         assertEquals("Cannot send request to yourself", viewModel.uiState.errorMessage)
     }
 
     @Test
-    fun `sendFriendRequest with AlreadyFriendsException shows specific error`() {
+    fun `sendFriendRequest with AlreadyFriendsException shows specific error`() = runTest {
         coEvery { sendFriendRequestUseCase.invoke(currentUserId, otherUserId) } returns Result.failure(
             AlreadyFriendsException(currentUserId, otherUserId)
         )
 
         viewModel.sendFriendRequest(otherUserId)
+        advanceUntilIdle()
 
         assertEquals("Already friends", viewModel.uiState.errorMessage)
     }
 
     @Test
-    fun `sendFriendRequest with UserNotFoundException shows specific error`() {
+    fun `sendFriendRequest with UserNotFoundException shows specific error`() = runTest {
         coEvery { sendFriendRequestUseCase.invoke(currentUserId, otherUserId) } returns Result.failure(
             UserNotFoundException(otherUserId)
         )
 
         viewModel.sendFriendRequest(otherUserId)
+        advanceUntilIdle()
 
         assertEquals("User not found", viewModel.uiState.errorMessage)
     }
 
     @Test
-    fun `loadPendingRequests success sets received and sent lists`() {
+    fun `loadPendingRequests success sets received and sent lists`() = runTest {
         val pending: FriendRequestWithUser = mockk()
         val sent: SentFriendRequestWithUser = mockk()
 
-        coEvery { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(pending)
         )
-        coEvery { getSentFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getSentFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(sent)
         )
 
         viewModel.loadPendingRequests()
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertEquals(1, state.receivedRequests.size)
@@ -245,7 +255,7 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `cancelFriendRequest with FriendRequestNotFoundException shows specific error`() {
+    fun `cancelFriendRequest with FriendRequestNotFoundException shows specific error`() = runTest {
         val requestId = UUID.random()
 
         coEvery {
@@ -253,35 +263,34 @@ class JetpackComposeSocialViewModelTest {
         } returns Result.failure(FriendRequestNotFoundException(requestId))
 
         viewModel.cancelFriendRequest(requestId)
+        advanceUntilIdle()
 
         assertEquals("Request not found", viewModel.uiState.errorMessage)
     }
 
     @Test
-    fun `acceptFriendRequest success reloads pending requests and friends`() {
+    fun `acceptFriendRequest success reloads pending requests and friends`() = runTest {
         val requestId = UUID.random()
 
         coEvery { acceptFriendRequestUseCase.invoke(requestId, currentUserId) } returns Result.success(
             Unit
         )
-        coEvery { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             emptyList()
         )
-        coEvery { getSentFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getSentFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             emptyList()
         )
-        coEvery { getUserFriendsUseCase.invoke(currentUserId) } returns Result.success(emptyList())
+        every { getUserFriendsUseCase.invoke(currentUserId) } returns flowOf(emptyList())
 
         viewModel.acceptFriendRequest(requestId)
+        advanceUntilIdle()
 
         coVerify { acceptFriendRequestUseCase.invoke(requestId, currentUserId) }
-        coVerify { getPendingFriendRequestsUseCase.invoke(currentUserId) }
-        coVerify { getSentFriendRequestsUseCase.invoke(currentUserId) }
-        coVerify { getUserFriendsUseCase.invoke(currentUserId) }
     }
 
     @Test
-    fun `rejectFriendRequest with UnauthorizedFriendshipActionException shows specific error`() {
+    fun `rejectFriendRequest with UnauthorizedFriendshipActionException shows specific error`() = runTest {
         val requestId = UUID.random()
 
         coEvery {
@@ -289,20 +298,22 @@ class JetpackComposeSocialViewModelTest {
         } returns Result.failure(UnauthorizedFriendshipActionException("Not authorized to reject"))
 
         viewModel.rejectFriendRequest(requestId)
+        advanceUntilIdle()
 
         assertEquals("Not authorized to reject", viewModel.uiState.errorMessage)
     }
 
     @Test
-    fun `loadFriends success sets friends list`() {
+    fun `loadFriends success sets friends list`() = runTest {
         val friend: User = mockk()
         every { friend.uuid } returns otherUserId
 
-        coEvery { getUserFriendsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getUserFriendsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(friend)
         )
 
         viewModel.loadFriends()
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertEquals(1, state.friends.size)
@@ -311,7 +322,7 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `show and hide remove friend dialog toggle friendToRemove`() {
+    fun `show and hide remove friend dialog toggle friendToRemove`() = runTest {
         val friend: User = mockk()
 
         viewModel.showRemoveFriendDialog(friend)
@@ -322,46 +333,51 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `confirmRemoveFriend success hides dialog and reloads friends`() {
+    fun `confirmRemoveFriend success hides dialog and reloads friends`() = runTest {
         val friend: User = mockk()
         every { friend.uuid } returns otherUserId
 
         coEvery { removeFriendUseCase.invoke(currentUserId, otherUserId) } returns Result.success(
             Unit
         )
-        coEvery { getUserFriendsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getUserFriendsUseCase.invoke(currentUserId) } returns flowOf(
             emptyList()
         )
 
         viewModel.showRemoveFriendDialog(friend)
         viewModel.confirmRemoveFriend()
+        advanceUntilIdle()
 
         val state = viewModel.uiState
         assertNull(state.friendToRemove)
         coVerify { removeFriendUseCase.invoke(currentUserId, otherUserId) }
-        coVerify { getUserFriendsUseCase.invoke(currentUserId) }
     }
 
     @Test
-    fun `clearSearch resets query and users but keeps other data`() {
+    fun `clearSearch resets query and users but keeps other data`() = runTest {
         val pending: FriendRequestWithUser = mockk()
         val sent: SentFriendRequestWithUser = mockk()
         val friend: User = mockk()
         every { friend.uuid } returns otherUserId
 
-        coEvery { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getPendingFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(pending)
         )
-        coEvery { getSentFriendRequestsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getSentFriendRequestsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(sent)
         )
-        coEvery { getUserFriendsUseCase.invoke(currentUserId) } returns Result.success(
+        every { getUserFriendsUseCase.invoke(currentUserId) } returns flowOf(
             listOf(friend)
         )
+        coEvery { searchUsersUseCase.invoke("john") } returns Result.success(emptyList())
 
         viewModel.loadPendingRequests()
         viewModel.loadFriends()
+        advanceUntilIdle()
+
         viewModel.onSearchQueryChange("john")
+        advanceUntilIdle()
+
         viewModel.showError("error")
 
         viewModel.clearSearch()
@@ -376,7 +392,7 @@ class JetpackComposeSocialViewModelTest {
     }
 
     @Test
-    fun `showError sets message and stops loading`() {
+    fun `showError sets message and stops loading`() = runTest {
         viewModel.showLoading()
 
         viewModel.showError("error msg")

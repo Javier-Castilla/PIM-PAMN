@@ -2,8 +2,6 @@ package software.ulpgc.wherewhen.presentation.chat.list
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -16,7 +14,10 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import software.ulpgc.wherewhen.domain.model.chat.Chat
@@ -24,7 +25,7 @@ import software.ulpgc.wherewhen.domain.model.chat.ChatWithUser
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.usecases.chat.GetUserChatsUseCase
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
-import java.time.LocalDateTime
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class JetpackComposeChatsViewModelTest {
@@ -104,8 +105,8 @@ class JetpackComposeChatsViewModelTest {
             participant1Id = currentUserId,
             participant2Id = UUID.random()
         )
-        val t1 = LocalDateTime.now().minusMinutes(10)
-        val t2 = LocalDateTime.now()
+        val t1 = Instant.now().minusSeconds(600)
+        val t2 = Instant.now()
 
         val c1 = ChatWithUser(chat1, user1, "old", t1, 1)
         val c2 = ChatWithUser(chat2, user2, "new", t2, 2)
@@ -177,7 +178,7 @@ class JetpackComposeChatsViewModelTest {
             participant1Id = currentUserId,
             participant2Id = UUID.random()
         )
-        val chatWithUser = ChatWithUser(chat, user, "hi", LocalDateTime.now(), 1)
+        val chatWithUser = ChatWithUser(chat, user, "hi", Instant.now(), 1)
 
         every { getUserChatsUseCase.invoke(currentUserId) } returns flowOf(listOf(chatWithUser))
 

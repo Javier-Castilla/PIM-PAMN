@@ -3,24 +3,19 @@ package software.ulpgc.wherewhen.domain.usecases.friendship
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import software.ulpgc.wherewhen.domain.exceptions.friendship.AlreadyFriendsException
-import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendRequestAlreadyExistsException
-import software.ulpgc.wherewhen.domain.exceptions.friendship.FriendshipNotFoundException
-import software.ulpgc.wherewhen.domain.exceptions.friendship.SelfFriendRequestException
-import software.ulpgc.wherewhen.domain.exceptions.user.UserNotFoundException
 import software.ulpgc.wherewhen.domain.model.friendship.FriendRequest
 import software.ulpgc.wherewhen.domain.model.friendship.FriendRequestStatus
-import software.ulpgc.wherewhen.domain.model.friendship.Friendship
 import software.ulpgc.wherewhen.domain.model.friendship.SentFriendRequestWithUser
 import software.ulpgc.wherewhen.domain.model.user.User
 import software.ulpgc.wherewhen.domain.ports.persistence.FriendRequestRepository
-import software.ulpgc.wherewhen.domain.ports.persistence.FriendshipRepository
 import software.ulpgc.wherewhen.domain.ports.persistence.UserRepository
 import software.ulpgc.wherewhen.domain.valueObjects.UUID
 import java.time.LocalDateTime
@@ -52,16 +47,14 @@ class GetSentFriendRequestsUseCaseTest {
         val receiverUser = mockk<User>()
         val expected = SentFriendRequestWithUser(request, receiverUser)
 
-        coEvery { friendRequestRepository.getSentRequestsFromUser(userId) } returns Result.success(listOf(request))
+        coEvery { friendRequestRepository.getSentRequestsFromUser(userId) } returns flowOf(listOf(request))
         coEvery { userRepository.getPublicUser(receiverId) } returns Result.success(receiverUser)
 
-        val result = useCase.invoke(userId)
+        val result = useCase.invoke(userId).first()
 
-        assertTrue(result.isSuccess)
-        val list = result.getOrNull()
-        assertNotNull(list)
-        assertEquals(1, list?.size)
-        assertEquals(expected, list?.first())
+        assertNotNull(result)
+        assertEquals(1, result.size)
+        assertEquals(expected, result.first())
 
         coVerify { friendRequestRepository.getSentRequestsFromUser(userId) }
         coVerify { userRepository.getPublicUser(receiverId) }
@@ -79,15 +72,13 @@ class GetSentFriendRequestsUseCaseTest {
             createdAt = LocalDateTime.now()
         )
 
-        coEvery { friendRequestRepository.getSentRequestsFromUser(userId) } returns Result.success(listOf(request))
+        coEvery { friendRequestRepository.getSentRequestsFromUser(userId) } returns flowOf(listOf(request))
         coEvery { userRepository.getPublicUser(receiverId) } returns Result.failure(RuntimeException("not found"))
 
-        val result = useCase.invoke(userId)
+        val result = useCase.invoke(userId).first()
 
-        assertTrue(result.isSuccess)
-        val list = result.getOrNull()
-        assertNotNull(list)
-        assertTrue(list!!.isEmpty())
+        assertNotNull(result)
+        assertTrue(result.isEmpty())
 
         coVerify { friendRequestRepository.getSentRequestsFromUser(userId) }
         coVerify { userRepository.getPublicUser(receiverId) }
