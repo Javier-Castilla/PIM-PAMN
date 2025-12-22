@@ -52,7 +52,7 @@ software.ulpgc.wherewhen/
 
 3. **Agrega tu archivo `google-services.json`** en:
    ```
-   app/src/main/
+   app/src/
    ```
 4. **Añade tus `API Keys` en `local.properties`:
    ```
@@ -131,4 +131,5 @@ Con ayuda de:
  - Aldo Saruni
 
 📍 Las Palmas de Gran Canaria, España  
+
 💼 [LinkedIn](https://www.linkedin.com/in/javier-castilla-moreno-43b7b5321/) | 🖥️ [GitHub](https://github.com/javcastilla)
